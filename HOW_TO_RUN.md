@@ -1,21 +1,41 @@
 # LG GeoView — Quick Start Guide
 
-## Prerequisites
-
-- Python 3.10+ installed
-- Virtual environment already set up in `.venv/`
-
----
-
-## Start the Application
+## First Time Setup (Clone & Run)
 
 ```bash
-cd C:\PythonProject
+# 1. Clone the repository
+git clone https://github.com/Anandraj-pro/LG-GeoView.git
+cd LG-GeoView
+
+# 2. Create virtual environment
+python -m venv .venv
+
+# 3. Activate virtual environment
+# Windows CMD:
 .venv\Scripts\activate
+# Windows PowerShell:
+.venv\Scripts\Activate.ps1
+# Mac/Linux:
+source .venv/bin/activate
+
+# 4. Install dependencies
+pip install -r requirements.txt
+
+# 5. Run the dashboard
 streamlit run app.py
 ```
 
 The dashboard opens at **http://localhost:8501**
+
+---
+
+## Start the Application (After Setup)
+
+```bash
+cd LG-GeoView
+.venv\Scripts\activate
+streamlit run app.py
+```
 
 ---
 
@@ -37,8 +57,6 @@ taskkill /F /PID <PID_NUMBER>
 ```bash
 taskkill /F /IM streamlit.exe 2>nul
 taskkill /F /FI "WINDOWTITLE eq streamlit*" 2>nul
-# Or kill the Python process running it:
-for /f "tokens=2" %i in ('tasklist /FI "IMAGENAME eq python.exe" /FO LIST ^| findstr PID') do taskkill /F /PID %i
 ```
 
 ---
@@ -72,6 +90,14 @@ Stop-Process -Name "streamlit" -Force -ErrorAction SilentlyContinue; Start-Sleep
 
 ---
 
+## Prerequisites
+
+- Python 3.10 or higher
+- Git
+- Web browser (Chrome recommended for printing)
+
+---
+
 ## Troubleshooting
 
 | Issue | Fix |
@@ -80,3 +106,4 @@ Stop-Process -Name "streamlit" -Force -ErrorAction SilentlyContinue; Start-Sleep
 | Module not found | `pip install -r requirements.txt` |
 | App won't load data | Check that `data/West_Campus_Care_Groups_Area 2026.xlsx` exists |
 | Browser doesn't open | Manually go to http://localhost:8501 |
+| Permission error on activate | Run `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser` in PowerShell |
