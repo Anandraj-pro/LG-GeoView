@@ -10,8 +10,7 @@ from src.data_loader import (
     validate_data_quality,
 )
 from src.map_builder import (
-    build_map, build_detailed_map, build_kingdom_map,
-    build_advanced_territory_map,
+    build_kingdom_map, build_advanced_territory_map,
     generate_territory_kml, MAP_STYLES,
 )
 from src.charts import (  # noqa: F401
@@ -432,44 +431,11 @@ st.markdown("")
 
 # --- Map ---
 st.subheader("Interactive Map")
-map_tab1, map_tab2, map_tab3, map_tab4 = st.tabs(
-    ["Overview Map", "Detailed Map", "King's Kingdom", "Territory View"]
+map_tab1, map_tab2 = st.tabs(
+    ["King's Kingdom", "Territory View"]
 )
 
 with map_tab1:
-    st.caption("Hover or click markers for details")
-    try:
-        folium_map = build_map(df_filtered, map_style=map_style_name)
-        st_folium(folium_map, use_container_width=True, height=920, key="overview_map")
-    except Exception as e:
-        st.error(f"Could not render overview map: {e}")
-
-with map_tab2:
-    st.caption("All group details visible — no hover needed. Best for printing & screenshots.")
-    sorted_areas = sorted(df_filtered["area"].unique())
-    dm_col1, dm_col2 = st.columns([2, 2])
-    with dm_col1:
-        detail_area_picks = st.multiselect(
-            "Filter areas for screenshot:",
-            options=sorted_areas,
-            default=sorted_areas,
-            key="detail_map_areas",
-        )
-    with dm_col2:
-        st.info("Deselect areas to reduce label overlap. Pick a few at a time for clean screenshots.")
-
-    if detail_area_picks:
-        detail_df = df_filtered[df_filtered["area"].isin(detail_area_picks)]
-    else:
-        detail_df = df_filtered
-
-    try:
-        detailed_map = build_detailed_map(detail_df, map_style=map_style_name)
-        st_folium(detailed_map, use_container_width=True, height=920, key="detailed_map")
-    except Exception as e:
-        st.error(f"Could not render detailed map: {e}")
-
-with map_tab3:
     # --- King's Kingdom View ---
     st.markdown("""
     <div class="kingdom-header">
@@ -567,7 +533,7 @@ with map_tab3:
     territory_data = territory_data.reset_index(drop=True)
     st.dataframe(territory_data, use_container_width=True, hide_index=True)
 
-with map_tab4:
+with map_tab2:
     # --- Advanced Territory Analysis ---
     st.markdown("#### Territory Analysis")
     st.caption("Toggle layers using the checkboxes on the map. "
