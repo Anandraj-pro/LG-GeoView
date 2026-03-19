@@ -9,7 +9,10 @@ from src.data_loader import (
     load_from_google_sheets, assign_strength, get_area_summary,
     validate_data_quality,
 )
-from src.map_builder import build_map, build_detailed_map, build_kingdom_map, MAP_STYLES
+from src.map_builder import (
+    build_map, build_detailed_map, build_kingdom_map,
+    build_territory_map, MAP_STYLES,
+)
 from src.charts import (  # noqa: F401
     members_by_area_chart, groups_by_area_chart, strength_pie_chart,
     area_detail_table, meeting_day_chart, top_bottom_groups_chart,
@@ -428,7 +431,9 @@ st.markdown("")
 
 # --- Map ---
 st.subheader("Interactive Map")
-map_tab1, map_tab2, map_tab3 = st.tabs(["Overview Map", "Detailed Map", "King's Kingdom"])
+map_tab1, map_tab2, map_tab3, map_tab4 = st.tabs(
+    ["Overview Map", "Detailed Map", "King's Kingdom", "Territory View"]
+)
 
 with map_tab1:
     st.caption("Hover or click markers for details")
@@ -560,6 +565,54 @@ with map_tab3:
     territory_data = territory_data.sort_values("Souls", ascending=False)
     territory_data = territory_data.reset_index(drop=True)
     st.dataframe(territory_data, use_container_width=True, hide_index=True)
+
+with map_tab4:
+    # --- Territory View ---
+    st.markdown("""
+    <div style="background: linear-gradient(145deg, #1e1e2f 0%, #252540 100%);
+         padding: 22px 28px; border-radius: 10px; border: 1px solid #444;
+         box-shadow: 0 2px 16px rgba(0,0,0,0.3); text-align: center;
+         margin-bottom: 16px;">
+        <div style="font-family: 'Cinzel', serif; font-size: 1.4rem;
+             font-weight: 700; color: #ccc; letter-spacing: 3px;
+             text-transform: uppercase;">Territory View</div>
+        <div style="width: 50px; height: 2px;
+             background: linear-gradient(90deg, transparent, #888, transparent);
+             margin: 10px auto;"></div>
+        <div style="font-family: 'Cormorant Garamond', serif;
+             font-size: 0.95rem; color: #999; letter-spacing: 1px;">
+             Colored area zones &mdash; click any territory for details</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Area selector for center focus
+    tv_col1, tv_col2 = st.columns([1, 2])
+    with tv_col1:
+        focus_area = st.selectbox(
+            "Center on area:",
+            options=sorted(df_filtered["area"].unique()),
+            index=0,
+            key="territory_focus_area",
+        )
+    with tv_col2:
+        territory_radius = st.slider(
+            "Nearby radius (km):",
+            min_value=1, max_value=10, value=3,
+            key="territory_radius",
+        )
+
+    territory_summary = get_area_summary(df_filtered)
+
+    try:
+        t_map = build_territory_map(
+            df_filtered, territory_summary,
+            center_area=focus_area,
+            radius=territory_radius * 0.01,
+        )
+        st_folium(t_map, use_container_width=True, height=920,
+                  key="territory_map")
+    except Exception as e:
+        st.error(f"Could not render territory map: {e}")
 
 # --- Drill-Down Section (pushed to next scroll view) ---
 st.markdown("<div style='margin-top: 60px;'></div>", unsafe_allow_html=True)

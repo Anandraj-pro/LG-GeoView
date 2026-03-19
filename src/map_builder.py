@@ -542,3 +542,280 @@ def _add_kingdom_legend(m: folium.Map, summary_df: pd.DataFrame):
     </div>
     """
     m.get_root().html.add_child(folium.Element(legend_html))
+
+
+# --- Kukatpally Territory Colors ---
+# Rich, saturated palette for area fills — each area gets a unique hue
+TERRITORY_PALETTE = [
+    {"fill": "#1B5E20", "border": "#2E7D32"},    # deep green
+    {"fill": "#0D47A1", "border": "#1565C0"},     # deep blue
+    {"fill": "#B71C1C", "border": "#C62828"},     # deep red
+    {"fill": "#4A148C", "border": "#6A1B9A"},     # purple
+    {"fill": "#E65100", "border": "#EF6C00"},     # orange
+    {"fill": "#006064", "border": "#00838F"},     # teal
+    {"fill": "#880E4F", "border": "#AD1457"},     # burgundy
+    {"fill": "#1A237E", "border": "#283593"},     # indigo
+    {"fill": "#33691E", "border": "#558B2F"},     # olive
+    {"fill": "#BF360C", "border": "#D84315"},     # terracotta
+    {"fill": "#004D40", "border": "#00695C"},     # emerald
+    {"fill": "#311B92", "border": "#4527A0"},     # violet
+    {"fill": "#827717", "border": "#9E9D24"},     # moss
+    {"fill": "#01579B", "border": "#0277BD"},     # steel blue
+    {"fill": "#F57F17", "border": "#F9A825"},     # amber
+    {"fill": "#263238", "border": "#37474F"},     # charcoal
+    {"fill": "#3E2723", "border": "#4E342E"},     # mahogany
+    {"fill": "#1B5E20", "border": "#388E3C"},     # jade
+]
+
+# Kukatpally center
+KUKATPALLY_CENTER = [17.4948, 78.3996]
+KUKATPALLY_RADIUS = 0.03  # ~3km in degrees
+
+
+def _generate_territory_polygon(lat, lng, radius=0.003, sides=6):
+    """Generate a hexagonal polygon around a point."""
+    import math
+    points = []
+    for i in range(sides):
+        angle = math.radians(60 * i - 30)
+        plat = lat + radius * math.cos(angle)
+        plng = lng + radius * 1.2 * math.sin(angle)
+        points.append([plat, plng])
+    points.append(points[0])
+    return points
+
+
+def build_territory_map(df: pd.DataFrame, summary_df: pd.DataFrame,
+                        center_area: str = "Kukatpally",
+                        radius: float = KUKATPALLY_RADIUS) -> folium.Map:
+    """Build a territory fill map centered on a focal area with colored zones."""
+    t0 = time.perf_counter()
+    logger.info("Building territory map centered on %s", center_area)
+
+    from src.data_loader import AREA_COORDINATES
+
+    # Get center coordinates
+    center_key = center_area.lower().strip()
+    center_coords = AREA_COORDINATES.get(center_key, KUKATPALLY_CENTER)
+
+    # Filter to nearby areas
+    nearby_areas = []
+    for area_name, coords in AREA_COORDINATES.items():
+        dist = ((coords[0] - center_coords[0])**2 +
+                (coords[1] - center_coords[1])**2)**0.5
+        if dist <= radius:
+            nearby_areas.append(area_name)
+
+    # Dark style for territory view
+    m = folium.Map(
+        location=center_coords,
+        zoom_start=14,
+        tiles="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+        attr="CartoDB Dark Matter",
+    )
+
+    if df.empty:
+        return m
+
+    # Filter data to nearby areas only
+    nearby_set = set(nearby_areas)
+    nearby_df = df[
+        df["area"].str.lower().str.strip().isin(nearby_set)
+    ].copy()
+    nearby_summary = summary_df[
+        summary_df["area"].str.lower().str.strip().isin(nearby_set)
+    ].copy()
+
+    if nearby_df.empty:
+        return m
+
+    # Assign colors to areas
+    unique_areas = sorted(nearby_summary["area"].unique())
+    area_color_map = {}
+    for idx, area in enumerate(unique_areas):
+        area_color_map[area] = TERRITORY_PALETTE[
+            idx % len(TERRITORY_PALETTE)
+        ]
+
+    # Draw territory polygons for each area
+    for _, area_row in nearby_summary.iterrows():
+        area_name = area_row["area"]
+        colors = area_color_map[area_name]
+        total_members = int(area_row["total_members"])
+        total_groups = int(area_row["total_groups"])
+        strength = area_row.get("strength", "Weak")
+
+        poly_radius = max(0.002, min(0.005, total_members * 0.00012))
+
+        polygon_points = _generate_territory_polygon(
+            area_row["latitude"], area_row["longitude"],
+            radius=poly_radius, sides=6,
+        )
+
+        popup_html = (
+            f'<div style="font-family: Palatino Linotype, serif;'
+            f' background: #1a1a2e; color: #e0e0e0; padding: 12px;'
+            f' border-radius: 8px; min-width: 160px;'
+            f' border-left: 4px solid {colors["border"]};">'
+            f'<b style="color: {colors["border"]}; font-size: 14px;'
+            f' letter-spacing: 1px;">{area_name}</b>'
+            f'<hr style="border-color: #333; margin: 6px 0;">'
+            f'<div style="font-size: 12px; line-height: 1.8;">'
+            f'Groups: <b>{total_groups}</b><br>'
+            f'Members: <b>{total_members}</b><br>'
+            f'Strength: <b>{strength}</b></div></div>'
+        )
+
+        folium.Polygon(
+            locations=polygon_points,
+            color=colors["border"],
+            fill=True,
+            fill_color=colors["fill"],
+            fill_opacity=0.35,
+            weight=2,
+            popup=folium.Popup(popup_html, max_width=200),
+            tooltip=f"{area_name} \u2014 {total_members} members",
+        ).add_to(m)
+
+        # Area name label
+        label_html = (
+            f'<div style="font-family: Cinzel, Palatino Linotype, serif;'
+            f' font-size: 11px; font-weight: 700;'
+            f' color: {colors["border"]};'
+            f' text-shadow: 0 0 6px rgba(0,0,0,0.9),'
+            f' 0 0 12px rgba(0,0,0,0.7);'
+            f' text-align: center; letter-spacing: 1px;'
+            f' text-transform: uppercase; white-space: nowrap;'
+            f' pointer-events: none;">{area_name}</div>'
+        )
+        folium.Marker(
+            location=[area_row["latitude"] + poly_radius * 0.5,
+                      area_row["longitude"]],
+            icon=folium.DivIcon(
+                html=label_html,
+                icon_size=(150, 18),
+                icon_anchor=(75, 9),
+            ),
+        ).add_to(m)
+
+        # Stats below area name
+        count_html = (
+            f'<div style="font-family: Cormorant Garamond, serif;'
+            f' font-size: 10px; color: #aaa;'
+            f' text-shadow: 0 0 4px rgba(0,0,0,0.9);'
+            f' text-align: center; white-space: nowrap;'
+            f' pointer-events: none;">'
+            f'{total_groups} groups &middot;'
+            f' {total_members} members</div>'
+        )
+        folium.Marker(
+            location=[area_row["latitude"] + poly_radius * 0.25,
+                      area_row["longitude"]],
+            icon=folium.DivIcon(
+                html=count_html,
+                icon_size=(150, 14),
+                icon_anchor=(75, 7),
+            ),
+        ).add_to(m)
+
+    # Individual group markers
+    for _, row in nearby_df.iterrows():
+        members = int(row["members"])
+        area_name = row["area"]
+        colors = area_color_map.get(area_name, TERRITORY_PALETTE[0])
+
+        folium.CircleMarker(
+            location=[row["latitude"], row["longitude"]],
+            radius=max(6, members * 0.4),
+            color="#FFFFFF",
+            fill=True,
+            fill_color=colors["border"],
+            fill_opacity=0.9,
+            weight=1.5,
+            tooltip=f"{row['leader_name']} \u2014 {members} members",
+        ).add_to(m)
+
+        folium.Marker(
+            location=[row["latitude"], row["longitude"]],
+            icon=folium.DivIcon(
+                html=(
+                    f'<div style="font-size: 9px; font-weight: bold;'
+                    f' color: #fff; text-align: center;'
+                    f' text-shadow: 0 0 4px rgba(0,0,0,0.9);'
+                    f' width: 24px; margin-left: -12px;'
+                    f' margin-top: -6px;">{members}</div>'
+                ),
+                icon_size=(24, 14),
+            ),
+        ).add_to(m)
+
+    # Legend
+    _add_territory_legend(m, area_color_map, nearby_summary, center_area)
+
+    elapsed = time.perf_counter() - t0
+    logger.info("Territory map built: %d areas, %d markers in %.3fs",
+                len(unique_areas), len(nearby_df), elapsed)
+    return m
+
+
+def _add_territory_legend(m, area_color_map, summary_df, center_area):
+    """Add territory color legend to the map."""
+    items_html = ""
+    for _, row in summary_df.sort_values(
+        "total_members", ascending=False
+    ).iterrows():
+        area = row["area"]
+        colors = area_color_map.get(area, TERRITORY_PALETTE[0])
+        members = int(row["total_members"])
+        groups = int(row["total_groups"])
+        items_html += (
+            f'<div style="margin-bottom: 6px; display: flex;'
+            f' align-items: center;">'
+            f'<div style="width: 14px; height: 14px; border-radius: 3px;'
+            f' background: {colors["fill"]};'
+            f' border: 1px solid {colors["border"]};'
+            f' margin-right: 8px; flex-shrink: 0;"></div>'
+            f'<div><span style="color: #e0e0e0; font-size: 11px;'
+            f' font-weight: 600;">{area}</span>'
+            f'<span style="color: #888; font-size: 10px;">'
+            f' {groups}g &middot; {members}m</span></div></div>'
+        )
+
+    total_areas = len(summary_df)
+    total_members = int(summary_df["total_members"].sum())
+
+    legend_html = f"""
+    <div style="
+        position: fixed;
+        bottom: 20px;
+        right: 10px;
+        z-index: 1000;
+        background: linear-gradient(145deg, #1e1e2f 0%, #252540 100%);
+        color: #e0e0e0;
+        padding: 16px 18px;
+        border-radius: 10px;
+        border: 1px solid #444;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        font-family: 'Palatino Linotype', serif;
+        font-size: 12px;
+        min-width: 180px;
+        max-width: 260px;
+        max-height: 420px;
+        overflow-y: auto;
+    ">
+        <div style="font-family: 'Cinzel', serif; font-size: 13px;
+             font-weight: 700; letter-spacing: 2px;
+             text-transform: uppercase; margin-bottom: 10px;
+             border-bottom: 1px solid #444; padding-bottom: 8px;
+             text-align: center; color: #ccc;">
+            {center_area} &amp; Nearby
+        </div>
+        {items_html}
+        <div style="border-top: 1px solid #444; padding-top: 8px;
+             margin-top: 8px; font-size: 10px; color: #888;
+             text-align: center;">
+            {total_areas} territories &middot; {total_members} total members
+        </div>
+    </div>
+    """
+    m.get_root().html.add_child(folium.Element(legend_html))
