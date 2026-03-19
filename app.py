@@ -852,40 +852,38 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # Map style selector
-    st.subheader("Map Style")
-    map_style_name = st.selectbox(
-        "Choose map view:",
-        options=list(MAP_STYLES.keys()),
-        index=0,
-    )
+    with st.expander("Map & Territory Controls", expanded=False):
+        map_style_name = st.selectbox(
+            "Map style:",
+            options=list(MAP_STYLES.keys()),
+            index=0,
+        )
 
-    # Territory controls in sidebar
-    st.markdown("---")
-    st.subheader("Territory Controls")
-    area_options = sorted(df["area"].unique()) if not df.empty else []
-    default_idx = 0
-    for i, a in enumerate(area_options):
-        if a.lower().strip() == "kukatpally":
-            default_idx = i
-            break
-    focus_area = st.selectbox(
-        "Center on area:",
-        options=area_options,
-        index=default_idx,
-        key="territory_focus_area",
-    )
-    territory_radius = st.slider(
-        "Nearby radius (km):",
-        min_value=1, max_value=15, value=10,
-        key="territory_radius",
-    )
-    color_mode = st.selectbox(
-        "Color territories by:",
-        options=["Area (unique colors)", "Strength", "Member Density"],
-        index=0,
-        key="territory_color_mode",
-    )
+        st.markdown("---")
+
+        area_options = sorted(df["area"].unique()) if not df.empty else []
+        default_idx = 0
+        for i, a in enumerate(area_options):
+            if a.lower().strip() == "kukatpally":
+                default_idx = i
+                break
+        focus_area = st.selectbox(
+            "Center on area:",
+            options=area_options,
+            index=default_idx,
+            key="territory_focus_area",
+        )
+        territory_radius = st.slider(
+            "Nearby radius (km):",
+            min_value=1, max_value=15, value=10,
+            key="territory_radius",
+        )
+        color_mode = st.selectbox(
+            "Color by:",
+            options=["Area (unique colors)", "Strength", "Member Density"],
+            index=0,
+            key="territory_color_mode",
+        )
 
     st.markdown("---")
     st.markdown("""
