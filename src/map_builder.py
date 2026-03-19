@@ -527,6 +527,22 @@ def build_kingdom_map(df: pd.DataFrame, summary_df: pd.DataFrame,
     # --- Kingdom legend ---
     _add_kingdom_legend(m, summary_df)
 
+    # Mobile-responsive legend
+    mobile_css = """
+    <style>
+    @media screen and (max-width: 480px) {
+        div[style*="position: fixed"] {
+            max-width: 140px !important;
+            font-size: 9px !important;
+            padding: 8px 10px !important;
+            bottom: 5px !important;
+            right: 5px !important;
+        }
+    }
+    </style>
+    """
+    m.get_root().html.add_child(folium.Element(mobile_css))
+
     elapsed = time.perf_counter() - t0
     logger.info("Kingdom map built: %d markers in %.3fs", len(df), elapsed)
     return m
@@ -878,6 +894,20 @@ def build_territory_map(df: pd.DataFrame, summary_df: pd.DataFrame,
     # Legend
     _add_territory_legend(m, area_color_map, area_names,
                           summary_lookup, occupied_areas, center_area)
+
+    # Mobile-responsive legend
+    m.get_root().html.add_child(folium.Element("""
+    <style>
+    @media screen and (max-width: 480px) {
+        div[style*="position: fixed"] {
+            max-width: 140px !important;
+            font-size: 9px !important;
+            padding: 8px 10px !important;
+            bottom: 5px !important;
+        }
+    }
+    </style>
+    """))
 
     elapsed = time.perf_counter() - t0
     logger.info("Territory map built in %.3fs", elapsed)
@@ -1286,7 +1316,42 @@ def build_advanced_territory_map(
     d_layer.add_to(m)
 
     # Layer control toggle (top-right checkbox panel)
-    folium.LayerControl(collapsed=False).add_to(m)
+    folium.LayerControl(collapsed=True).add_to(m)
+
+    # Mobile-responsive styles for map UI elements
+    mobile_css = """
+    <style>
+    @media screen and (max-width: 768px) {
+        .leaflet-control-layers {
+            max-width: 160px !important;
+            font-size: 11px !important;
+        }
+        .leaflet-control-layers label {
+            font-size: 11px !important;
+        }
+        div[style*="position: fixed"] {
+            max-width: 150px !important;
+            font-size: 10px !important;
+            padding: 8px 10px !important;
+            bottom: 10px !important;
+        }
+    }
+    @media screen and (max-width: 480px) {
+        .leaflet-control-layers {
+            max-width: 140px !important;
+            font-size: 10px !important;
+        }
+        div[style*="position: fixed"] {
+            max-width: 130px !important;
+            font-size: 9px !important;
+            padding: 6px 8px !important;
+            bottom: 5px !important;
+            right: 5px !important;
+        }
+    }
+    </style>
+    """
+    m.get_root().html.add_child(folium.Element(mobile_css))
 
     # Color mode legend (bottom-left)
     _add_advanced_legend(m, color_by, area_names, occupied, center_area)
