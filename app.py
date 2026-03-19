@@ -21,8 +21,8 @@ from src.charts import (  # noqa: F401
 
 # --- Page Config ---
 st.set_page_config(
-    page_title="LG GeoView",
-    page_icon="\U0001f5fa\ufe0f",
+    page_title="TKT Kingdom - West Campus",
+    page_icon="\u2720",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -324,7 +324,16 @@ def load_data(source: str, value: str = "") -> pd.DataFrame:
 
 # --- Sidebar ---
 with st.sidebar:
-    st.title("LG GeoView")
+    st.markdown("""
+    <div style="text-align: center; padding: 8px 0 4px 0;">
+        <div style="font-family: 'Cinzel', serif; font-size: 1.3rem;
+             font-weight: 700; color: #8B6914; letter-spacing: 2px;">
+            &#10013; TKT Kingdom</div>
+        <div style="font-family: 'Cormorant Garamond', serif;
+             font-size: 0.85rem; color: #A0936E; font-style: italic;">
+            West Campus &middot; Hyderabad</div>
+    </div>
+    """, unsafe_allow_html=True)
     st.markdown("---")
 
     # Data source selection
@@ -417,7 +426,15 @@ with st.sidebar:
     )
 
     st.markdown("---")
-    st.caption("Built for LG Group Leadership")
+    st.markdown("""
+    <div style="font-family: 'Cormorant Garamond', serif;
+         font-size: 0.85rem; color: #A0936E; font-style: italic;
+         text-align: center; padding: 8px 12px; line-height: 1.5;">
+        "Go and make disciples of all nations"
+        <br><span style="font-size: 0.75rem; color: #BFA76A;">
+        &mdash; Matthew 28:19</span>
+    </div>
+    """, unsafe_allow_html=True)
 
 # --- Main Content ---
 if df_filtered.empty:
@@ -425,8 +442,19 @@ if df_filtered.empty:
     st.stop()
 
 # Title
-st.markdown("## LG GeoView — West Campus, Hyderabad")
-st.markdown("Care group distribution, strength, and regional insights across Hyderabad West areas.")
+st.markdown("""
+<div style="text-align: center; margin-bottom: 8px;">
+    <div style="font-family: 'Cinzel', serif; font-size: 1.8rem;
+         font-weight: 700; color: #8B6914; letter-spacing: 3px;">
+        &#10013; TKT Kingdom &mdash; West Campus</div>
+    <div style="width: 80px; height: 2px;
+         background: linear-gradient(90deg, transparent, #D4AF37, transparent);
+         margin: 8px auto;"></div>
+    <div style="font-family: 'Cormorant Garamond', serif;
+         font-size: 1rem; color: #7A6B50; letter-spacing: 1px;">
+        Care group distribution, strength &amp; regional insights across Hyderabad West</div>
+</div>
+""", unsafe_allow_html=True)
 
 # --- KPI Metrics ---
 total_groups = len(df_filtered)
@@ -483,16 +511,20 @@ with col6:
 st.markdown("")
 
 # --- Map ---
-st.subheader("Interactive Map")
+st.markdown("""
+<div style="font-family: 'Cinzel', serif; font-size: 1.1rem;
+     color: #8B6914; letter-spacing: 2px; margin-bottom: 8px;">
+    &#9768; Kingdom Map</div>
+""", unsafe_allow_html=True)
 map_tab1, map_tab2 = st.tabs(
-    ["King's Kingdom", "Territory View"]
+    ["TKT Kingdom", "Territory Analysis"]
 )
 
 with map_tab1:
     # --- King's Kingdom View ---
     st.markdown("""
     <div class="kingdom-header">
-        <div class="kingdom-title">&#9768; King's Kingdom</div>
+        <div class="kingdom-title">&#9768; TKT Kingdom</div>
         <div class="kingdom-divider"></div>
         <div class="kingdom-subtitle">West Campus &mdash; Hyderabad</div>
     </div>
@@ -564,12 +596,17 @@ with map_tab1:
 
     # Territory strength breakdown
     st.markdown("""
-    <div style="background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
-         padding: 20px; border-radius: 10px; border: 1px solid rgba(212,175,55,0.2);
+    <div style="background: linear-gradient(145deg, #FAF5E8 0%, #F0E6CC 100%);
+         padding: 16px 20px; border-radius: 10px; border: 1px solid #D4AF3733;
          margin-top: 16px;">
-        <div style="font-family: 'Cinzel', serif; color: #D4AF37; font-size: 14px;
-             letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px;
+        <div style="font-family: 'Cinzel', serif; color: #8B6914; font-size: 14px;
+             letter-spacing: 2px; text-transform: uppercase;
              text-align: center;">Territory Report</div>
+        <div style="font-family: 'Cormorant Garamond', serif;
+             font-size: 0.85rem; color: #A0936E; font-style: italic;
+             text-align: center; margin-top: 4px;">
+            "The Lord your God will bless you in all your harvest"
+            &mdash; Deuteronomy 16:15</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -588,7 +625,17 @@ with map_tab1:
 
 with map_tab2:
     # --- Advanced Territory Analysis ---
-    st.markdown("#### Territory Analysis")
+    st.markdown("""
+    <div style="font-family: 'Cinzel', serif; font-size: 1rem;
+         color: #8B6914; letter-spacing: 2px; margin-bottom: 4px;">
+        &#9879; Territory Analysis</div>
+    <div style="font-family: 'Cormorant Garamond', serif;
+         font-size: 0.85rem; color: #A0936E; font-style: italic;
+         margin-bottom: 12px;">
+        "Ask of me, and I will make the nations your inheritance,
+        the ends of the earth your possession"
+        &mdash; Psalm 2:8</div>
+    """, unsafe_allow_html=True)
     st.caption("Toggle layers using the checkboxes on the map. "
                "Click any territory for detailed stats.")
 
@@ -673,10 +720,19 @@ with map_tab2:
         else:
             st.success("All nearby territories occupied!")
 
-# --- Drill-Down Section (pushed to next scroll view) ---
+# --- Drill-Down Section ---
 st.markdown("<div style='margin-top: 60px;'></div>", unsafe_allow_html=True)
 st.markdown("---")
-st.subheader("Area Drill-Down")
+st.markdown("""
+<div style="font-family: 'Cinzel', serif; font-size: 1.1rem;
+     color: #8B6914; letter-spacing: 2px; margin-bottom: 4px;">
+    &#9879; Territory Drill-Down</div>
+<div style="font-family: 'Cormorant Garamond', serif;
+     font-size: 0.85rem; color: #A0936E; font-style: italic;
+     margin-bottom: 12px;">
+    "Where two or three gather in my name, there am I with them"
+    &mdash; Matthew 18:20</div>
+""", unsafe_allow_html=True)
 
 # Show "All Areas" by default, with option to filter
 area_options = ["All Areas"] + sorted(df_filtered["area"].unique())
@@ -742,7 +798,16 @@ with dl_col2:
 
 # --- Charts ---
 st.markdown("---")
-st.subheader("Analytics & Insights")
+st.markdown("""
+<div style="font-family: 'Cinzel', serif; font-size: 1.1rem;
+     color: #8B6914; letter-spacing: 2px; margin-bottom: 4px;">
+    &#10025; Kingdom Insights</div>
+<div style="font-family: 'Cormorant Garamond', serif;
+     font-size: 0.85rem; color: #A0936E; font-style: italic;
+     margin-bottom: 12px;">
+    "For where your treasure is, there your heart will be also"
+    &mdash; Matthew 6:21</div>
+""", unsafe_allow_html=True)
 
 chart_col1, chart_col2 = st.columns(2)
 
@@ -790,7 +855,16 @@ with chart_col6:
 
 # --- Area Summary Table ---
 st.markdown("---")
-st.subheader("Area Summary")
+st.markdown("""
+<div style="font-family: 'Cinzel', serif; font-size: 1.1rem;
+     color: #8B6914; letter-spacing: 2px; margin-bottom: 4px;">
+    &#127968; Territory Summary</div>
+<div style="font-family: 'Cormorant Garamond', serif;
+     font-size: 0.85rem; color: #A0936E; font-style: italic;
+     margin-bottom: 12px;">
+    "The earth is the Lord's, and everything in it"
+    &mdash; Psalm 24:1</div>
+""", unsafe_allow_html=True)
 summary_df = get_area_summary(df_filtered)
 st.dataframe(
     summary_df.rename(columns={
@@ -809,9 +883,22 @@ st.dataframe(
 # --- Footer ---
 st.markdown("---")
 st.markdown("""
-<div style="text-align: center; font-family: 'Cinzel', serif;
-     color: #A0936E; font-size: 0.8rem; letter-spacing: 2px;
-     padding: 10px 0;">
-    LG GeoView v1.1 &nbsp;&middot;&nbsp; West Campus &nbsp;&middot;&nbsp; Hyderabad
+<div style="text-align: center; padding: 16px 0 8px 0;">
+    <div style="font-family: 'Cormorant Garamond', serif;
+         font-size: 0.9rem; color: #A0936E; font-style: italic;
+         max-width: 500px; margin: 0 auto; line-height: 1.5;">
+        "The harvest is plentiful, but the workers are few.
+        Ask the Lord of the harvest to send out workers
+        into his harvest field."
+        <br><span style="font-size: 0.8rem; color: #BFA76A;">
+        &mdash; Matthew 9:37-38</span>
+    </div>
+    <div style="width: 60px; height: 1px;
+         background: linear-gradient(90deg, transparent, #D4AF37, transparent);
+         margin: 12px auto;"></div>
+    <div style="font-family: 'Cinzel', serif;
+         color: #A0936E; font-size: 0.75rem; letter-spacing: 2px;">
+        TKT Kingdom v1.1 &nbsp;&middot;&nbsp; West Campus &nbsp;&middot;&nbsp; Hyderabad
+    </div>
 </div>
 """, unsafe_allow_html=True)
