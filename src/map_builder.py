@@ -11,8 +11,43 @@ from src.logger import get_logger
 logger = get_logger(__name__)
 
 # Hyderabad West center
-HYDERABAD_CENTER = [17.470, 78.410]
+HYDERABAD_CENTER = [17.480, 78.385]
 DEFAULT_ZOOM = 12
+
+# Padding added around the outermost area coordinates
+BOUNDS_PADDING = 0.015
+
+
+def _compute_map_bounds():
+    """Compute map bounds dynamically from area coordinates.
+
+    Auto-expands when new areas are added to area_coordinates.json.
+    Returns (center, bounds) where bounds = [[south, west], [north, east]].
+    """
+    from src.data_loader import AREA_COORDINATES
+    if not AREA_COORDINATES:
+        return HYDERABAD_CENTER, None
+
+    lats = [c[0] for c in AREA_COORDINATES.values()]
+    lngs = [c[1] for c in AREA_COORDINATES.values()]
+
+    south = min(lats) - BOUNDS_PADDING
+    north = max(lats) + BOUNDS_PADDING
+    west = min(lngs) - BOUNDS_PADDING
+    east = max(lngs) + BOUNDS_PADDING
+
+    center = [(south + north) / 2, (west + east) / 2]
+    bounds = [[south, west], [north, east]]
+    return center, bounds
+
+
+def _apply_fixed_bounds(m, bounds):
+    """Lock map to fixed bounds — users can't pan outside the region."""
+    if bounds:
+        m.fit_bounds(bounds)
+        m.options["maxBounds"] = bounds
+        m.options["minZoom"] = 11
+
 
 # 32 distinct colors — one per care group, no repeats
 GROUP_COLORS = [
@@ -54,20 +89,24 @@ def build_map(df: pd.DataFrame, map_style: str = None) -> folium.Map:
 
     logger.info("Building overview map with %d markers, style=%s", len(df), style_key)
 
+    center, bounds = _compute_map_bounds()
+
     # Create base map
     if style["tiles"] == "OpenStreetMap":
         m = folium.Map(
-            location=HYDERABAD_CENTER,
+            location=center,
             zoom_start=DEFAULT_ZOOM,
             tiles="OpenStreetMap",
         )
     else:
         m = folium.Map(
-            location=HYDERABAD_CENTER,
+            location=center,
             zoom_start=DEFAULT_ZOOM,
             tiles=style["tiles"],
             attr=style["attr"],
         )
+
+    _apply_fixed_bounds(m, bounds)
 
     if df.empty:
         return m
@@ -160,19 +199,23 @@ def build_detailed_map(df: pd.DataFrame, map_style: str = None) -> folium.Map:
 
     logger.info("Building detailed map with %d markers", len(df))
 
+    center, bounds = _compute_map_bounds()
+
     if style["tiles"] == "OpenStreetMap":
         m = folium.Map(
-            location=HYDERABAD_CENTER,
+            location=center,
             zoom_start=DEFAULT_ZOOM,
             tiles="OpenStreetMap",
         )
     else:
         m = folium.Map(
-            location=HYDERABAD_CENTER,
+            location=center,
             zoom_start=DEFAULT_ZOOM,
             tiles=style["tiles"],
             attr=style["attr"],
         )
+
+    _apply_fixed_bounds(m, bounds)
 
     if df.empty:
         return m
@@ -327,13 +370,17 @@ def build_kingdom_map(df: pd.DataFrame, summary_df: pd.DataFrame,
     t0 = time.perf_counter()
     logger.info("Building King's Kingdom map with %d markers", len(df))
 
+    center, bounds = _compute_map_bounds()
+
     # Dark tile layer for kingdom aesthetic
     m = folium.Map(
-        location=HYDERABAD_CENTER,
+        location=center,
         zoom_start=DEFAULT_ZOOM,
         tiles="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
         attr="CartoDB Dark Matter",
     )
+
+    _apply_fixed_bounds(m, bounds)
 
     if df.empty:
         return m
@@ -672,6 +719,8 @@ def build_territory_map(df: pd.DataFrame, summary_df: pd.DataFrame,
         if dist <= radius:
             nearby[area_name] = coords
 
+    _, map_bounds = _compute_map_bounds()
+
     # Google Maps style — standard road map
     m = folium.Map(
         location=center_coords,
@@ -679,6 +728,8 @@ def build_territory_map(df: pd.DataFrame, summary_df: pd.DataFrame,
         tiles="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
         attr="Google Maps",
     )
+
+    _apply_fixed_bounds(m, map_bounds)
 
     if not nearby:
         return m
@@ -949,11 +1000,15 @@ def build_advanced_territory_map(
         if dist <= radius:
             nearby[area_name] = coords
 
+    _, map_bounds = _compute_map_bounds()
+
     m = folium.Map(
         location=center_coords, zoom_start=13,
         tiles="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
         attr="Google Maps",
     )
+
+    _apply_fixed_bounds(m, map_bounds)
 
     if not nearby:
         return m
