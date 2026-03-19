@@ -1,5 +1,7 @@
 """Data loading module — Excel, Google Sheets, CSV support."""
 
+from __future__ import annotations
+
 import json
 import os
 import time
