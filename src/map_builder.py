@@ -310,3 +310,235 @@ def _add_legend(m: folium.Map, group_color_map: dict, df: pd.DataFrame):
     </div>
     """
     m.get_root().html.add_child(folium.Element(legend_html))
+
+
+# --- Strength colors for Kingdom map ---
+STRENGTH_GLOW = {
+    "Strong": {"fill": "#D4AF37", "border": "#FFD700", "glow": "rgba(212,175,55,0.45)"},
+    "Medium": {"fill": "#C0A060", "border": "#DAA520", "glow": "rgba(192,160,96,0.30)"},
+    "Weak":   {"fill": "#8B6914", "border": "#A0822A", "glow": "rgba(139,105,20,0.20)"},
+}
+
+
+def build_kingdom_map(df: pd.DataFrame, summary_df: pd.DataFrame,
+                      map_style: str = None) -> folium.Map:
+    """Build the King's Kingdom map — dark terrain with golden territory markers."""
+    t0 = time.perf_counter()
+    logger.info("Building King's Kingdom map with %d markers", len(df))
+
+    # Dark tile layer for kingdom aesthetic
+    m = folium.Map(
+        location=HYDERABAD_CENTER,
+        zoom_start=DEFAULT_ZOOM,
+        tiles="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+        attr="CartoDB Dark Matter",
+    )
+
+    if df.empty:
+        return m
+
+    # --- Territory reach circles (area-level) ---
+    for _, area_row in summary_df.iterrows():
+        strength = area_row.get("strength", "Weak")
+        colors = STRENGTH_GLOW.get(strength, STRENGTH_GLOW["Weak"])
+        total_members = int(area_row["total_members"])
+        total_groups = int(area_row["total_groups"])
+
+        # Outer glow — territory reach
+        reach_radius = max(600, total_members * 25)
+        folium.Circle(
+            location=[area_row["latitude"], area_row["longitude"]],
+            radius=reach_radius,
+            color=colors["border"],
+            fill=True,
+            fill_color=colors["glow"],
+            fill_opacity=0.15,
+            weight=1,
+            dash_array="6 4",
+        ).add_to(m)
+
+        # Inner territory circle
+        folium.Circle(
+            location=[area_row["latitude"], area_row["longitude"]],
+            radius=reach_radius * 0.5,
+            color=colors["fill"],
+            fill=True,
+            fill_color=colors["fill"],
+            fill_opacity=0.08,
+            weight=1,
+        ).add_to(m)
+
+        # Area territory label
+        territory_html = f"""
+        <div style="
+            font-family: 'Cinzel', 'Palatino Linotype', 'Book Antiqua', serif;
+            color: {colors['border']};
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            text-shadow: 0 0 8px rgba(0,0,0,0.9), 0 0 20px {colors['glow']};
+            text-align: center;
+            white-space: nowrap;
+            pointer-events: none;
+        ">{area_row['area']}</div>
+        """
+        folium.Marker(
+            location=[area_row["latitude"] + 0.006, area_row["longitude"]],
+            icon=folium.DivIcon(
+                html=territory_html,
+                icon_size=(200, 20),
+                icon_anchor=(100, 10),
+            ),
+        ).add_to(m)
+
+        # Territory stats below area name
+        stats_html = f"""
+        <div style="
+            font-family: 'Cinzel', 'Palatino Linotype', serif;
+            color: #BFA76A;
+            font-size: 10px;
+            letter-spacing: 1px;
+            text-shadow: 0 0 6px rgba(0,0,0,0.9);
+            text-align: center;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0.8;
+        ">{total_groups} shepherds &middot; {total_members} souls</div>
+        """
+        folium.Marker(
+            location=[area_row["latitude"] + 0.004, area_row["longitude"]],
+            icon=folium.DivIcon(
+                html=stats_html,
+                icon_size=(200, 16),
+                icon_anchor=(100, 8),
+            ),
+        ).add_to(m)
+
+    # --- Individual group markers ---
+    for _, row in df.iterrows():
+        members = int(row["members"])
+        strength = row.get("strength", "Weak")
+        colors = STRENGTH_GLOW.get(strength, STRENGTH_GLOW["Weak"])
+
+        # Golden marker circle
+        folium.CircleMarker(
+            location=[row["latitude"], row["longitude"]],
+            radius=max(7, members * 0.5),
+            color=colors["border"],
+            fill=True,
+            fill_color=colors["fill"],
+            fill_opacity=0.85,
+            weight=2,
+        ).add_to(m)
+
+        # Center bright dot
+        folium.CircleMarker(
+            location=[row["latitude"], row["longitude"]],
+            radius=3,
+            color="#FFFFFF",
+            fill=True,
+            fill_color="#FFD700",
+            fill_opacity=1.0,
+            weight=0,
+        ).add_to(m)
+
+        # Popup
+        popup_html = f"""
+        <div style="font-family: 'Palatino Linotype', 'Book Antiqua', serif;
+             min-width: 180px; background: #1a1a2e; color: #d4af37;
+             padding: 12px 14px; border-radius: 8px;
+             border: 1px solid #d4af3744;">
+            <div style="font-size: 14px; font-weight: bold;
+                 letter-spacing: 1px; margin-bottom: 6px;
+                 border-bottom: 1px solid #d4af3733; padding-bottom: 6px;">
+                {row['area']}
+            </div>
+            <table style="font-size: 12px; border-collapse: collapse; width: 100%;">
+                <tr><td style="color: #BFA76A; padding: 2px 0;">Shepherd</td>
+                    <td style="color: #E8D5A3; text-align: right;">{row['leader_name']}</td></tr>
+                <tr><td style="color: #BFA76A; padding: 2px 0;">Families</td>
+                    <td style="color: #E8D5A3; text-align: right;">{int(row.get('families', 0))}</td></tr>
+                <tr><td style="color: #BFA76A; padding: 2px 0;">Individuals</td>
+                    <td style="color: #E8D5A3; text-align: right;">{int(row.get('individuals', 0))}</td></tr>
+                <tr><td style="color: #BFA76A; padding: 2px 0;">Total Souls</td>
+                    <td style="color: #FFD700; font-weight: bold; text-align: right;">{members}</td></tr>
+                <tr><td style="color: #BFA76A; padding: 2px 0;">Gathering</td>
+                    <td style="color: #E8D5A3; text-align: right;">{row.get('meeting_day', '')}</td></tr>
+            </table>
+        </div>
+        """
+        folium.CircleMarker(
+            location=[row["latitude"], row["longitude"]],
+            radius=max(7, members * 0.5),
+            color="transparent",
+            fill=False,
+            popup=folium.Popup(popup_html, max_width=220),
+            tooltip=f"{row['leader_name']} \u2014 {members} souls",
+        ).add_to(m)
+
+    # --- Kingdom legend ---
+    _add_kingdom_legend(m, summary_df)
+
+    elapsed = time.perf_counter() - t0
+    logger.info("Kingdom map built: %d markers in %.3fs", len(df), elapsed)
+    return m
+
+
+def _add_kingdom_legend(m: folium.Map, summary_df: pd.DataFrame):
+    """Add a regal legend to the Kingdom map."""
+    total_areas = len(summary_df)
+    total_groups = int(summary_df["total_groups"].sum())
+    total_members = int(summary_df["total_members"].sum())
+
+    legend_html = f"""
+    <div style="
+        position: fixed;
+        bottom: 20px;
+        right: 10px;
+        z-index: 1000;
+        background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
+        color: #d4af37;
+        padding: 16px 20px;
+        border-radius: 10px;
+        border: 1px solid #d4af3744;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(212,175,55,0.1);
+        font-family: 'Palatino Linotype', 'Book Antiqua', 'Cinzel', serif;
+        font-size: 12px;
+        min-width: 200px;
+        max-width: 240px;
+    ">
+        <div style="font-size: 14px; font-weight: bold; letter-spacing: 2px;
+             text-transform: uppercase; margin-bottom: 10px;
+             border-bottom: 1px solid #d4af3733; padding-bottom: 8px;
+             text-align: center;">
+            &#9768; King's Kingdom
+        </div>
+        <div style="margin-bottom: 8px;">
+            <span style="color: #FFD700;">&#9679;</span>
+            <span style="color: #BFA76A; font-size: 11px;">
+                Strong (30+ souls)</span>
+        </div>
+        <div style="margin-bottom: 8px;">
+            <span style="color: #DAA520;">&#9679;</span>
+            <span style="color: #BFA76A; font-size: 11px;">
+                Growing (20-29 souls)</span>
+        </div>
+        <div style="margin-bottom: 12px;">
+            <span style="color: #8B6914;">&#9679;</span>
+            <span style="color: #BFA76A; font-size: 11px;">
+                Emerging (&lt;20 souls)</span>
+        </div>
+        <div style="border-top: 1px solid #d4af3733; padding-top: 8px;
+             font-size: 11px; color: #BFA76A; line-height: 1.6;">
+            {total_areas} Territories &middot;
+            {total_groups} Shepherds<br>
+            {total_members} Souls Gathered
+        </div>
+        <div style="font-size: 9px; color: #8B7340; margin-top: 6px;
+             text-align: center; letter-spacing: 1px;">
+            DASHED CIRCLE = TERRITORY REACH
+        </div>
+    </div>
+    """
+    m.get_root().html.add_child(folium.Element(legend_html))

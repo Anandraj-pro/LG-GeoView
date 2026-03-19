@@ -9,7 +9,7 @@ from src.data_loader import (
     load_from_google_sheets, assign_strength, get_area_summary,
     validate_data_quality,
 )
-from src.map_builder import build_map, build_detailed_map, MAP_STYLES
+from src.map_builder import build_map, build_detailed_map, build_kingdom_map, MAP_STYLES
 from src.charts import (  # noqa: F401
     members_by_area_chart, groups_by_area_chart, strength_pie_chart,
     area_detail_table, meeting_day_chart, top_bottom_groups_chart,
@@ -50,6 +50,106 @@ st.markdown("""
     /* Divider lines */
     hr {
         border-color: #dee2e6 !important;
+    }
+
+    /* --- King's Kingdom View Styles --- */
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap');
+
+    .kingdom-header {
+        background: linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        padding: 28px 32px;
+        border-radius: 12px;
+        border: 1px solid rgba(212, 175, 55, 0.25);
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4),
+                    inset 0 1px 0 rgba(212, 175, 55, 0.1);
+        text-align: center;
+        margin-bottom: 20px;
+        position: relative;
+        overflow: hidden;
+    }
+    .kingdom-header::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: radial-gradient(ellipse at 50% 0%,
+                    rgba(212, 175, 55, 0.08) 0%, transparent 70%);
+        pointer-events: none;
+    }
+    .kingdom-title {
+        font-family: 'Cinzel', 'Palatino Linotype', serif;
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #D4AF37;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        text-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+        margin: 0;
+    }
+    .kingdom-subtitle {
+        font-family: 'Cormorant Garamond', 'Palatino Linotype', serif;
+        font-size: 1rem;
+        color: #BFA76A;
+        letter-spacing: 2px;
+        margin-top: 6px;
+        font-style: italic;
+    }
+    .kingdom-divider {
+        width: 60px;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #D4AF37, transparent);
+        margin: 12px auto;
+    }
+
+    .kingdom-metric {
+        background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
+        padding: 18px 14px;
+        border-radius: 10px;
+        text-align: center;
+        border: 1px solid rgba(212, 175, 55, 0.2);
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+        position: relative;
+        overflow: hidden;
+    }
+    .kingdom-metric::after {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #D4AF37, transparent);
+    }
+    .kingdom-metric-icon {
+        font-size: 1.4rem;
+        margin-bottom: 4px;
+    }
+    .kingdom-metric-value {
+        font-family: 'Cinzel', serif;
+        font-size: 2rem;
+        font-weight: 700;
+        color: #D4AF37;
+        text-shadow: 0 0 12px rgba(212, 175, 55, 0.2);
+    }
+    .kingdom-metric-label {
+        font-family: 'Cormorant Garamond', serif;
+        font-size: 0.85rem;
+        color: #BFA76A;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        margin-top: 4px;
+    }
+
+    .kingdom-scripture {
+        font-family: 'Cormorant Garamond', serif;
+        font-size: 1.05rem;
+        color: #BFA76A;
+        text-align: center;
+        font-style: italic;
+        padding: 16px 40px;
+        margin: 16px 0;
+        border-left: 2px solid #D4AF3744;
+        border-right: 2px solid #D4AF3744;
+        background: linear-gradient(90deg,
+                    rgba(212,175,55,0.03), transparent, rgba(212,175,55,0.03));
     }
 
     /* --- Responsive Styles (Tablet / Small Screens) --- */
@@ -328,7 +428,7 @@ st.markdown("")
 
 # --- Map ---
 st.subheader("Interactive Map")
-map_tab1, map_tab2 = st.tabs(["Overview Map", "Detailed Map"])
+map_tab1, map_tab2, map_tab3 = st.tabs(["Overview Map", "Detailed Map", "King's Kingdom"])
 
 with map_tab1:
     st.caption("Hover or click markers for details")
@@ -362,6 +462,104 @@ with map_tab2:
         st_folium(detailed_map, use_container_width=True, height=920, key="detailed_map")
     except Exception as e:
         st.error(f"Could not render detailed map: {e}")
+
+with map_tab3:
+    # --- King's Kingdom View ---
+    st.markdown("""
+    <div class="kingdom-header">
+        <div class="kingdom-title">&#9768; King's Kingdom</div>
+        <div class="kingdom-divider"></div>
+        <div class="kingdom-subtitle">West Campus &mdash; Hyderabad</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Kingdom KPI metrics
+    strong_count = len(df_filtered[df_filtered["strength"] == "Strong"])
+    medium_count = len(df_filtered[df_filtered["strength"] == "Medium"])
+    weak_count = len(df_filtered[df_filtered["strength"] == "Weak"])
+    kingdom_summary = get_area_summary(df_filtered)
+
+    kk1, kk2, kk3, kk4, kk5 = st.columns(5)
+    with kk1:
+        st.markdown(f"""
+        <div class="kingdom-metric">
+            <div class="kingdom-metric-icon">&#127968;</div>
+            <div class="kingdom-metric-value">{num_areas}</div>
+            <div class="kingdom-metric-label">Territories</div>
+        </div>""", unsafe_allow_html=True)
+    with kk2:
+        st.markdown(f"""
+        <div class="kingdom-metric">
+            <div class="kingdom-metric-icon">&#9879;</div>
+            <div class="kingdom-metric-value">{total_groups}</div>
+            <div class="kingdom-metric-label">Shepherds</div>
+        </div>""", unsafe_allow_html=True)
+    with kk3:
+        st.markdown(f"""
+        <div class="kingdom-metric">
+            <div class="kingdom-metric-icon">&#10025;</div>
+            <div class="kingdom-metric-value">{total_members}</div>
+            <div class="kingdom-metric-label">Souls Gathered</div>
+        </div>""", unsafe_allow_html=True)
+    with kk4:
+        st.markdown(f"""
+        <div class="kingdom-metric">
+            <div class="kingdom-metric-icon">&#9733;</div>
+            <div class="kingdom-metric-value">{strong_count}</div>
+            <div class="kingdom-metric-label">Strong Groups</div>
+        </div>""", unsafe_allow_html=True)
+    with kk5:
+        st.markdown(f"""
+        <div class="kingdom-metric">
+            <div class="kingdom-metric-icon">&#127793;</div>
+            <div class="kingdom-metric-value">{weak_count}</div>
+            <div class="kingdom-metric-label">Emerging</div>
+        </div>""", unsafe_allow_html=True)
+
+    st.markdown("")
+
+    # Scripture quote
+    st.markdown("""
+    <div class="kingdom-scripture">
+        "The harvest is plentiful, but the workers are few.
+        Ask the Lord of the harvest to send out workers into his harvest field."
+        <br><span style="color: #8B7340; font-size: 0.85rem;">&mdash; Matthew 9:37-38</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Kingdom map
+    try:
+        kingdom_map = build_kingdom_map(
+            df_filtered, kingdom_summary, map_style=map_style_name
+        )
+        st_folium(kingdom_map, use_container_width=True, height=920,
+                  key="kingdom_map")
+    except Exception as e:
+        st.error(f"Could not render Kingdom map: {e}")
+
+    # Territory strength breakdown
+    st.markdown("""
+    <div style="background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
+         padding: 20px; border-radius: 10px; border: 1px solid rgba(212,175,55,0.2);
+         margin-top: 16px;">
+        <div style="font-family: 'Cinzel', serif; color: #D4AF37; font-size: 14px;
+             letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px;
+             text-align: center;">Territory Report</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    territory_data = kingdom_summary.rename(columns={
+        "area": "Territory",
+        "total_groups": "Shepherds",
+        "total_members": "Souls",
+        "total_families": "Families",
+        "avg_members": "Avg per Group",
+        "strength": "Strength",
+    })[["Territory", "Shepherds", "Families", "Souls",
+        "Avg per Group", "Strength"]]
+    territory_data = territory_data.sort_values("Souls", ascending=False)
+    territory_data = territory_data.reset_index(drop=True)
+    st.dataframe(territory_data, use_container_width=True, hide_index=True)
 
 # --- Drill-Down Section (pushed to next scroll view) ---
 st.markdown("<div style='margin-top: 60px;'></div>", unsafe_allow_html=True)
