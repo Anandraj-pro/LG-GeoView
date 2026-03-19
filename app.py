@@ -441,74 +441,70 @@ if df_filtered.empty:
     st.warning("No data available. Please check your data source.")
     st.stop()
 
-# Title
-st.markdown("""
-<div style="text-align: center; margin-bottom: 8px;">
-    <div style="font-family: 'Cinzel', serif; font-size: 1.8rem;
-         font-weight: 700; color: #8B6914; letter-spacing: 3px;">
-        &#10013; TKT Kingdom &mdash; West Campus</div>
-    <div style="width: 80px; height: 2px;
-         background: linear-gradient(90deg, transparent, #D4AF37, transparent);
-         margin: 8px auto;"></div>
-    <div style="font-family: 'Cormorant Garamond', serif;
-         font-size: 1rem; color: #7A6B50; letter-spacing: 1px;">
-        Care group distribution, strength &amp; regional insights across Hyderabad West</div>
-</div>
-""", unsafe_allow_html=True)
-
-# --- KPI Metrics ---
+# --- Kingdom Banner ---
 total_groups = len(df_filtered)
 total_families = int(df_filtered["families"].sum())
 total_individuals = int(df_filtered["individuals"].sum())
 total_members = int(df_filtered["members"].sum())
 num_areas = df_filtered["area"].nunique()
 avg_per_group = total_members / total_groups if total_groups > 0 else 0
+strong_count = len(df_filtered[df_filtered["strength"] == "Strong"])
+weak_count = len(df_filtered[df_filtered["strength"] == "Weak"])
 
-col1, col2, col3, col4, col5, col6 = st.columns(6)
+st.markdown("""
+<div class="kingdom-header">
+    <div class="kingdom-title">&#9768; TKT Kingdom</div>
+    <div class="kingdom-divider"></div>
+    <div class="kingdom-subtitle">West Campus &mdash; Hyderabad</div>
+</div>
+""", unsafe_allow_html=True)
 
-with col1:
+# Kingdom KPI metrics — main page banner
+kk1, kk2, kk3, kk4, kk5 = st.columns(5)
+with kk1:
     st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-value">{num_areas}</div>
-        <div class="metric-label">Areas</div>
+    <div class="kingdom-metric">
+        <div class="kingdom-metric-icon">&#127968;</div>
+        <div class="kingdom-metric-value">{num_areas}</div>
+        <div class="kingdom-metric-label">Territories</div>
+    </div>""", unsafe_allow_html=True)
+with kk2:
+    st.markdown(f"""
+    <div class="kingdom-metric">
+        <div class="kingdom-metric-icon">&#9879;</div>
+        <div class="kingdom-metric-value">{total_groups}</div>
+        <div class="kingdom-metric-label">Shepherds</div>
+    </div>""", unsafe_allow_html=True)
+with kk3:
+    st.markdown(f"""
+    <div class="kingdom-metric">
+        <div class="kingdom-metric-icon">&#10025;</div>
+        <div class="kingdom-metric-value">{total_members}</div>
+        <div class="kingdom-metric-label">Souls Gathered</div>
+    </div>""", unsafe_allow_html=True)
+with kk4:
+    st.markdown(f"""
+    <div class="kingdom-metric">
+        <div class="kingdom-metric-icon">&#9733;</div>
+        <div class="kingdom-metric-value">{strong_count}</div>
+        <div class="kingdom-metric-label">Strong Groups</div>
+    </div>""", unsafe_allow_html=True)
+with kk5:
+    st.markdown(f"""
+    <div class="kingdom-metric">
+        <div class="kingdom-metric-icon">&#127793;</div>
+        <div class="kingdom-metric-value">{weak_count}</div>
+        <div class="kingdom-metric-label">Emerging</div>
     </div>""", unsafe_allow_html=True)
 
-with col2:
-    st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-value">{total_groups}</div>
-        <div class="metric-label">Care Groups</div>
-    </div>""", unsafe_allow_html=True)
-
-with col3:
-    st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-value">{total_families}</div>
-        <div class="metric-label">Families</div>
-    </div>""", unsafe_allow_html=True)
-
-with col4:
-    st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-value">{total_individuals}</div>
-        <div class="metric-label">Individuals</div>
-    </div>""", unsafe_allow_html=True)
-
-with col5:
-    st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-value">{total_members}</div>
-        <div class="metric-label">Total Members</div>
-    </div>""", unsafe_allow_html=True)
-
-with col6:
-    st.markdown(f"""
-    <div class="metric-card">
-        <div class="metric-value">{avg_per_group:.1f}</div>
-        <div class="metric-label">Avg per Group</div>
-    </div>""", unsafe_allow_html=True)
-
-st.markdown("")
+# Scripture below banner
+st.markdown("""
+<div class="kingdom-scripture">
+    "The harvest is plentiful, but the workers are few.
+    Ask the Lord of the harvest to send out workers into his harvest field."
+    <br><span style="color: #BFA76A; font-size: 0.85rem;">&mdash; Matthew 9:37-38</span>
+</div>
+""", unsafe_allow_html=True)
 
 # --- Map ---
 st.markdown("""
@@ -521,68 +517,8 @@ map_tab1, map_tab2 = st.tabs(
 )
 
 with map_tab1:
-    # --- King's Kingdom View ---
-    st.markdown("""
-    <div class="kingdom-header">
-        <div class="kingdom-title">&#9768; TKT Kingdom</div>
-        <div class="kingdom-divider"></div>
-        <div class="kingdom-subtitle">West Campus &mdash; Hyderabad</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Kingdom KPI metrics
-    strong_count = len(df_filtered[df_filtered["strength"] == "Strong"])
-    medium_count = len(df_filtered[df_filtered["strength"] == "Medium"])
-    weak_count = len(df_filtered[df_filtered["strength"] == "Weak"])
+    # --- TKT Kingdom Map ---
     kingdom_summary = get_area_summary(df_filtered)
-
-    kk1, kk2, kk3, kk4, kk5 = st.columns(5)
-    with kk1:
-        st.markdown(f"""
-        <div class="kingdom-metric">
-            <div class="kingdom-metric-icon">&#127968;</div>
-            <div class="kingdom-metric-value">{num_areas}</div>
-            <div class="kingdom-metric-label">Territories</div>
-        </div>""", unsafe_allow_html=True)
-    with kk2:
-        st.markdown(f"""
-        <div class="kingdom-metric">
-            <div class="kingdom-metric-icon">&#9879;</div>
-            <div class="kingdom-metric-value">{total_groups}</div>
-            <div class="kingdom-metric-label">Shepherds</div>
-        </div>""", unsafe_allow_html=True)
-    with kk3:
-        st.markdown(f"""
-        <div class="kingdom-metric">
-            <div class="kingdom-metric-icon">&#10025;</div>
-            <div class="kingdom-metric-value">{total_members}</div>
-            <div class="kingdom-metric-label">Souls Gathered</div>
-        </div>""", unsafe_allow_html=True)
-    with kk4:
-        st.markdown(f"""
-        <div class="kingdom-metric">
-            <div class="kingdom-metric-icon">&#9733;</div>
-            <div class="kingdom-metric-value">{strong_count}</div>
-            <div class="kingdom-metric-label">Strong Groups</div>
-        </div>""", unsafe_allow_html=True)
-    with kk5:
-        st.markdown(f"""
-        <div class="kingdom-metric">
-            <div class="kingdom-metric-icon">&#127793;</div>
-            <div class="kingdom-metric-value">{weak_count}</div>
-            <div class="kingdom-metric-label">Emerging</div>
-        </div>""", unsafe_allow_html=True)
-
-    st.markdown("")
-
-    # Scripture quote
-    st.markdown("""
-    <div class="kingdom-scripture">
-        "The harvest is plentiful, but the workers are few.
-        Ask the Lord of the harvest to send out workers into his harvest field."
-        <br><span style="color: #8B7340; font-size: 0.85rem;">&mdash; Matthew 9:37-38</span>
-    </div>
-    """, unsafe_allow_html=True)
 
     # Kingdom map
     try:
