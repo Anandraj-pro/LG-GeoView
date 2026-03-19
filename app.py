@@ -860,6 +860,33 @@ with st.sidebar:
         index=0,
     )
 
+    # Territory controls in sidebar
+    st.markdown("---")
+    st.subheader("Territory Controls")
+    area_options = sorted(df["area"].unique()) if not df.empty else []
+    default_idx = 0
+    for i, a in enumerate(area_options):
+        if a.lower().strip() == "kukatpally":
+            default_idx = i
+            break
+    focus_area = st.selectbox(
+        "Center on area:",
+        options=area_options,
+        index=default_idx,
+        key="territory_focus_area",
+    )
+    territory_radius = st.slider(
+        "Nearby radius (km):",
+        min_value=1, max_value=15, value=10,
+        key="territory_radius",
+    )
+    color_mode = st.selectbox(
+        "Color territories by:",
+        options=["Area (unique colors)", "Strength", "Member Density"],
+        index=0,
+        key="territory_color_mode",
+    )
+
     st.markdown("---")
     st.markdown("""
     <div style="font-family: 'Cormorant Garamond', serif;
@@ -936,60 +963,12 @@ hero_html = f"""<div class="hero-banner">\
 st.markdown(hero_html, unsafe_allow_html=True)
 
 # --- Map ---
-st.markdown("""
-<div style="font-family: 'Cinzel', serif; font-size: 1.1rem;
-     color: var(--text-heading); letter-spacing: 2px; margin-bottom: 8px;">
-    &#x2666; Kingdom Map</div>
-""", unsafe_allow_html=True)
 map_tab1, map_tab2 = st.tabs(
     ["Territory Analysis", "TKT Kingdom"]
 )
 
 with map_tab1:
-    # --- Advanced Territory Analysis ---
-    st.markdown("""
-    <div style="font-family: 'Cinzel', serif; font-size: 1rem;
-         color: var(--text-heading); letter-spacing: 2px; margin-bottom: 4px;">
-        &#x2666; Territory Analysis</div>
-    <div style="font-family: 'Cormorant Garamond', serif;
-         font-size: 0.85rem; color: var(--text-muted); font-style: italic;
-         margin-bottom: 12px;">
-        "Ask of me, and I will make the nations your inheritance,
-        the ends of the earth your possession"
-        - Psalm 2:8</div>
-    """, unsafe_allow_html=True)
-    st.caption("Toggle layers using the checkboxes on the map. "
-               "Click any territory for detailed stats.")
-
-    # Controls row
-    tv_c1, tv_c2, tv_c3 = st.columns([1, 1, 1])
-    with tv_c1:
-        area_options = sorted(df_filtered["area"].unique())
-        default_idx = 0
-        for i, a in enumerate(area_options):
-            if a.lower().strip() == "kukatpally":
-                default_idx = i
-                break
-        focus_area = st.selectbox(
-            "Center on area:",
-            options=area_options,
-            index=default_idx,
-            key="territory_focus_area",
-        )
-    with tv_c2:
-        territory_radius = st.slider(
-            "Nearby radius (km):",
-            min_value=1, max_value=15, value=10,
-            key="territory_radius",
-        )
-    with tv_c3:
-        color_mode = st.selectbox(
-            "Color territories by:",
-            options=["Area (unique colors)", "Strength", "Member Density"],
-            index=0,
-            key="territory_color_mode",
-        )
-
+    # --- Territory Analysis — map first, no clutter ---
     color_by_map = {
         "Area (unique colors)": "area",
         "Strength": "strength",
