@@ -598,40 +598,40 @@ with st.sidebar:
     # Theme toggle
     light_mode = st.toggle("Light Mode", value=False, key="theme_toggle")
 
-if light_mode:
-    st.markdown("""<style>
-    :root {
-        --bg: #FFFBF0 !important;
-        --bg-secondary: #F5EDD8 !important;
-        --bg-card: rgba(255,251,240,0.9) !important;
-        --text: #5D4E37 !important;
-        --text-muted: #7A6B50 !important;
-        --text-heading: #8B6914 !important;
-        --accent: #D4AF37 !important;
-        --accent-dim: rgba(212,175,55,0.15) !important;
-        --border: rgba(212,175,55,0.25) !important;
-        --sidebar-bg: linear-gradient(180deg,#FAF5E8 0%,#F5EDD8 100%) !important;
-        --scripture-bg: rgba(212,175,55,0.05) !important;
-        --section-bg: rgba(245,237,216,0.6) !important;
-    }
-    .hero-banner { background: #F5EDD8 !important; }
-    .hero-banner::after {
-        background: linear-gradient(to top,
-            #F5EDD8 0%, transparent 30%,
-            transparent 70%, rgba(245,237,216,0.8) 100%) !important;
-    }
-    .hero-title-line1 {
-        background: linear-gradient(to bottom, #5D4E37, #8B6914) !important;
-        -webkit-background-clip: text !important;
-        -webkit-text-fill-color: transparent !important;
-    }
-    .hero-scripture { color: #7A6B50 !important; }
-    .hero-badge-text { color: #7A6B50 !important; }
-    .hero-badge-dot { background: #8B6914 !important; }
-    .hero-kpi::after { background: rgba(255,251,240,0.92) !important; }
-    .hero-kpi-label { color: #7A6B50 !important; }
-    .hero-shape { opacity: 0.4 !important; }
-    </style>""", unsafe_allow_html=True)
+    if light_mode:
+        st.markdown(
+            '<style>'
+            ':root {'
+            '--bg:#FFFBF0!important;'
+            '--bg-secondary:#F5EDD8!important;'
+            '--bg-card:rgba(255,251,240,0.9)!important;'
+            '--text:#5D4E37!important;'
+            '--text-muted:#7A6B50!important;'
+            '--text-heading:#8B6914!important;'
+            '--accent:#D4AF37!important;'
+            '--accent-dim:rgba(212,175,55,0.15)!important;'
+            '--border:rgba(212,175,55,0.25)!important;'
+            '--sidebar-bg:linear-gradient(180deg,#FAF5E8,#F5EDD8)!important;'
+            '--scripture-bg:rgba(212,175,55,0.05)!important;'
+            '--section-bg:rgba(245,237,216,0.6)!important;'
+            '}'
+            '.hero-banner{background:#F5EDD8!important}'
+            '.hero-banner::after{background:linear-gradient(to top,'
+            '#F5EDD8 0%,transparent 30%,'
+            'transparent 70%,rgba(245,237,216,0.8) 100%)!important}'
+            '.hero-title-line1{background:linear-gradient(to bottom,'
+            '#5D4E37,#8B6914)!important;'
+            '-webkit-background-clip:text!important;'
+            '-webkit-text-fill-color:transparent!important}'
+            '.hero-scripture{color:#7A6B50!important}'
+            '.hero-badge-text{color:#7A6B50!important}'
+            '.hero-badge-dot{background:#8B6914!important}'
+            '.hero-kpi::after{background:rgba(255,251,240,0.92)!important}'
+            '.hero-kpi-label{color:#7A6B50!important}'
+            '.hero-shape{opacity:0.4!important}'
+            '</style>',
+            unsafe_allow_html=True,
+        )
 
     # Data source selection
     st.subheader("Data Source")
