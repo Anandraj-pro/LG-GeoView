@@ -1,5 +1,6 @@
 """Map visualization module using Folium (Google Maps-style background)."""
 
+import os
 import time
 
 import folium
@@ -903,15 +904,33 @@ STRENGTH_TERRITORY = {
 }
 
 
+def _load_ward_data():
+    """Load ward boundary polygons and area-to-ward mapping."""
+    import json as _json
+    base = os.path.dirname(os.path.dirname(__file__))
+    bnd_path = os.path.join(base, "data", "ward_boundaries.json")
+    map_path = os.path.join(base, "data", "area_ward_mapping.json")
+    try:
+        with open(bnd_path) as f:
+            boundaries = _json.load(f)
+        with open(map_path) as f:
+            mapping = _json.load(f)
+        return boundaries, mapping
+    except (FileNotFoundError, ValueError) as e:
+        logger.warning("Ward boundary data not found: %s", e)
+        return {}, {}
+
+
 def build_advanced_territory_map(
     df, summary_df,
     center_area="Kukatpally",
     radius=KUKATPALLY_RADIUS,
     color_by="area",
 ):
-    """Build advanced territory map with multiple toggleable layers.
+    """Build advanced territory map with real GHMC ward boundaries.
 
-    Layers: Territory Boundaries, Group Markers, Gap Analysis,
+    Uses actual administrative polygon shapes from ward_boundaries.json.
+    Layers: Ward Boundaries, Group Markers, Gap Analysis,
     Strength Indicators, and Member Density Stats.
     """
     t0 = time.perf_counter()
@@ -922,6 +941,7 @@ def build_advanced_territory_map(
     center_key = center_area.lower().strip()
     center_coords = AREA_COORDINATES.get(center_key, KUKATPALLY_CENTER)
 
+    # Find nearby areas
     nearby = {}
     for area_name, coords in AREA_COORDINATES.items():
         dist = ((coords[0] - center_coords[0]) ** 2 +
@@ -930,7 +950,7 @@ def build_advanced_territory_map(
             nearby[area_name] = coords
 
     m = folium.Map(
-        location=center_coords, zoom_start=14,
+        location=center_coords, zoom_start=13,
         tiles="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
         attr="Google Maps",
     )
@@ -938,114 +958,158 @@ def build_advanced_territory_map(
     if not nearby:
         return m
 
-    lats = [c[0] for c in nearby.values()]
-    lngs = [c[1] for c in nearby.values()]
-    pad = 0.008
-    bbox = (min(lats) - pad, max(lats) + pad,
-            min(lngs) - pad, max(lngs) + pad)
+    # Load real ward boundary data
+    ward_boundaries, area_ward_map = _load_ward_data()
 
     area_names = list(nearby.keys())
-    centers = [nearby[a] for a in area_names]
     occupied = set(df["area"].str.lower().str.strip().unique())
 
     slookup = {}
     for _, srow in summary_df.iterrows():
         slookup[srow["area"].lower().strip()] = srow
 
-    # Color assignment based on mode
-    area_color_map = {}
+    # Find which wards are relevant (used by nearby areas)
+    ward_to_areas = {}
+    for area_name in area_names:
+        ward = area_ward_map.get(area_name)
+        if ward:
+            if ward not in ward_to_areas:
+                ward_to_areas[ward] = []
+            ward_to_areas[ward].append(area_name)
+
+    # Assign colors per ward
+    ward_color_map = {}
     cidx = 0
-    for name in area_names:
-        srow = slookup.get(name)
-        if name not in occupied:
-            area_color_map[name] = UNOCCUPIED_COLOR
+    for ward_name in ward_to_areas:
+        areas_in_ward = ward_to_areas[ward_name]
+        has_groups = any(a in occupied for a in areas_in_ward)
+
+        if not has_groups:
+            ward_color_map[ward_name] = UNOCCUPIED_COLOR
             continue
-        if color_by == "strength" and srow is not None:
-            st = srow.get("strength", "Weak")
-            area_color_map[name] = STRENGTH_TERRITORY.get(
-                st, STRENGTH_TERRITORY["Weak"])
-        elif color_by == "density" and srow is not None:
-            mem = int(srow["total_members"])
-            if mem >= 50:
-                area_color_map[name] = {
+
+        if color_by == "strength":
+            # Use the dominant strength of areas in this ward
+            strengths = []
+            for a in areas_in_ward:
+                sr = slookup.get(a)
+                if sr is not None:
+                    strengths.append(sr.get("strength", "Weak"))
+            if "Strong" in strengths:
+                ward_color_map[ward_name] = STRENGTH_TERRITORY["Strong"]
+            elif "Medium" in strengths:
+                ward_color_map[ward_name] = STRENGTH_TERRITORY["Medium"]
+            else:
+                ward_color_map[ward_name] = STRENGTH_TERRITORY["Weak"]
+        elif color_by == "density":
+            total_mem = sum(
+                int(slookup[a]["total_members"])
+                for a in areas_in_ward if a in slookup
+            )
+            if total_mem >= 80:
+                ward_color_map[ward_name] = {
                     "fill": "#1B5E20", "border": "#2E7D32"}
-            elif mem >= 30:
-                area_color_map[name] = {
+            elif total_mem >= 50:
+                ward_color_map[ward_name] = {
                     "fill": "#4CAF50", "border": "#388E3C"}
-            elif mem >= 15:
-                area_color_map[name] = {
+            elif total_mem >= 25:
+                ward_color_map[ward_name] = {
                     "fill": "#FFC107", "border": "#F9A825"}
             else:
-                area_color_map[name] = {
+                ward_color_map[ward_name] = {
                     "fill": "#FF5722", "border": "#D84315"}
         else:
-            area_color_map[name] = TERRITORY_PALETTE[
+            ward_color_map[ward_name] = TERRITORY_PALETTE[
                 cidx % len(TERRITORY_PALETTE)]
             cidx += 1
 
-    boundaries = _compute_voronoi_boundaries(centers, bbox)
-
-    # --- Layer 1: Territory Boundaries ---
+    # --- Layer 1: Real Ward Boundary Polygons ---
     t_layer = folium.FeatureGroup(
-        name="Territory Boundaries", show=True)
-    for idx, bnd in boundaries.items():
-        if len(bnd) < 3:
-            continue
-        name = area_names[idx]
-        colors = area_color_map[name]
-        is_occ = name in occupied
-        display = name.title()
-        srow = slookup.get(name)
+        name="Ward Boundaries", show=True)
 
-        if srow is not None:
-            grp = int(srow["total_groups"])
-            mem = int(srow["total_members"])
-            stren = srow.get("strength", "")
-            avg = mem / grp if grp > 0 else 0
+    for ward_name, ward_areas in ward_to_areas.items():
+        bnd = ward_boundaries.get(ward_name)
+        if not bnd or len(bnd) < 3:
+            continue
+        colors = ward_color_map.get(ward_name, UNOCCUPIED_COLOR)
+        has_groups = any(a in occupied for a in ward_areas)
+
+        # Aggregate stats for this ward
+        total_grp = 0
+        total_mem = 0
+        area_list = []
+        for a in ward_areas:
+            sr = slookup.get(a)
+            if sr is not None:
+                total_grp += int(sr["total_groups"])
+                total_mem += int(sr["total_members"])
+                area_list.append(a.title())
+
+        avg = total_mem / total_grp if total_grp > 0 else 0
+        display = ward_name.replace("Ward ", "")
+
+        if has_groups:
+            areas_str = ", ".join(area_list) if area_list else "—"
             popup_t = (
                 f'<div style="font-family:Arial;padding:10px;'
-                f'min-width:180px;">'
-                f'<b style="font-size:15px;color:'
-                f'{colors["border"]};">{display}</b>'
+                f'min-width:200px;">'
+                f'<b style="font-size:14px;color:'
+                f'{colors["border"]};">{ward_name}</b>'
                 f'<hr style="margin:6px 0;">'
+                f'<div style="font-size:11px;color:#666;'
+                f'margin-bottom:6px;">Areas: {areas_str}</div>'
                 f'<table style="font-size:12px;width:100%;">'
                 f'<tr><td>Groups:</td>'
-                f'<td align="right"><b>{grp}</b></td></tr>'
+                f'<td align="right"><b>{total_grp}</b></td></tr>'
                 f'<tr><td>Members:</td>'
-                f'<td align="right"><b>{mem}</b></td></tr>'
+                f'<td align="right"><b>{total_mem}</b></td></tr>'
                 f'<tr><td>Avg/Group:</td>'
                 f'<td align="right"><b>{avg:.1f}</b></td></tr>'
-                f'<tr><td>Strength:</td>'
-                f'<td align="right"><b>{stren}</b></td></tr>'
                 f'</table></div>')
         else:
             popup_t = (
                 f'<div style="font-family:Arial;padding:10px;">'
-                f'<b style="font-size:15px;">{display}</b><br>'
+                f'<b style="font-size:14px;">{ward_name}</b><br>'
                 f'<span style="color:#e74c3c;font-weight:bold;">'
-                f'No groups \u2014 expansion opportunity</span>'
-                f'</div>')
+                f'No groups \u2014 expansion zone</span></div>')
 
+        # Draw the real irregular ward polygon
         folium.Polygon(
             locations=bnd, color=colors["border"],
             fill=True, fill_color=colors["fill"],
-            fill_opacity=0.35 if is_occ else 0.10, weight=3,
-            popup=folium.Popup(popup_t, max_width=250),
-            tooltip=display,
+            fill_opacity=0.40 if has_groups else 0.10,
+            weight=3,
+            popup=folium.Popup(popup_t, max_width=280),
+            tooltip=ward_name,
         ).add_to(t_layer)
 
+        # Ward label at centroid
+        avg_lat = sum(p[0] for p in bnd) / len(bnd)
+        avg_lng = sum(p[1] for p in bnd) / len(bnd)
         folium.Marker(
-            location=[nearby[name][0], nearby[name][1]],
+            location=[avg_lat, avg_lng],
             icon=folium.DivIcon(html=(
-                f'<div style="font-family:Arial;font-size:12px;'
+                f'<div style="font-family:Arial;font-size:11px;'
                 f'font-weight:bold;color:{colors["border"]};'
                 f'text-shadow:1px 1px 2px white,-1px -1px 2px white,'
                 f'1px -1px 2px white,-1px 1px 2px white;'
-                f'text-align:center;pointer-events:none;">'
-                f'{display}</div>'),
-                icon_size=(160, 18), icon_anchor=(80, 9)),
+                f'text-align:center;pointer-events:none;'
+                f'white-space:nowrap;">{display}</div>'),
+                icon_size=(180, 18), icon_anchor=(90, 9)),
         ).add_to(t_layer)
+
     t_layer.add_to(m)
+
+    # Build area -> color lookup from ward colors
+    area_color_map = {}
+    for area_name in area_names:
+        ward = area_ward_map.get(area_name)
+        if ward and ward in ward_color_map:
+            area_color_map[area_name] = ward_color_map[ward]
+        elif area_name in occupied:
+            area_color_map[area_name] = TERRITORY_PALETTE[0]
+        else:
+            area_color_map[area_name] = UNOCCUPIED_COLOR
 
     # --- Layer 2: Group Markers ---
     m_layer = folium.FeatureGroup(
