@@ -24,7 +24,7 @@ st.set_page_config(
     page_title="TKT Kingdom - West Campus",
     page_icon="\u2720",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 # --- Viewport meta for mobile ---
@@ -575,9 +575,15 @@ st.markdown("""
         /* Hide floating shapes on mobile */
         .hero-shape { display: none !important; }
 
-        /* Map height — shorter on mobile */
+        /* Map — fit mobile screen */
         iframe {
-            height: 400px !important;
+            height: 380px !important;
+            max-width: 100vw !important;
+        }
+        [data-testid="stIFrame"],
+        .stFolium {
+            max-width: 100% !important;
+            overflow: hidden !important;
         }
 
         /* Charts — compact */
@@ -983,7 +989,7 @@ with map_tab1:
             radius=territory_radius * 0.01,
             color_by=color_by,
         )
-        st_folium(t_map, use_container_width=True, height=920,
+        st_folium(t_map, use_container_width=True, height=550,
                   key="territory_map")
     except Exception as e:
         st.error(f"Could not render territory map: {e}")
@@ -1033,7 +1039,7 @@ with map_tab2:
         kingdom_map = build_kingdom_map(
             df_filtered, kingdom_summary, map_style=map_style_name
         )
-        st_folium(kingdom_map, use_container_width=True, height=920,
+        st_folium(kingdom_map, use_container_width=True, height=550,
                   key="kingdom_map")
     except Exception as e:
         st.error(f"Could not render Kingdom map: {e}")
