@@ -577,62 +577,54 @@ avg_per_group = total_members / total_groups if total_groups > 0 else 0
 strong_count = len(df_filtered[df_filtered["strength"] == "Strong"])
 weak_count = len(df_filtered[df_filtered["strength"] == "Weak"])
 
-st.markdown(f"""
-<div class="hero-banner">
-    <!-- Animated floating shapes -->
-    <div class="hero-shape hero-shape-1"></div>
-    <div class="hero-shape hero-shape-2"></div>
-    <div class="hero-shape hero-shape-3"></div>
-    <div class="hero-shape hero-shape-4"></div>
-
-    <!-- Content -->
-    <div class="hero-content">
-        <div class="hero-badge">
-            <div class="hero-badge-dot"></div>
-            <span class="hero-badge-text">West Campus &middot; Hyderabad</span>
-        </div>
-
-        <h1 class="hero-title-line1">TKT Kingdom</h1>
-        <p class="hero-title-line2">Expanding His Territory</p>
-
-        <p class="hero-scripture">
-            &ldquo;The harvest is plentiful, but the workers are few.
-            Ask the Lord of the harvest to send out workers
-            into his harvest field.&rdquo;
-            <br>&mdash; Matthew 9:37-38
-        </p>
-    </div>
-
-    <!-- KPI row embedded in hero -->
-    <div class="hero-kpis">
-        <div class="hero-kpi">
-            <div class="hero-kpi-icon">&#127968;</div>
-            <div class="hero-kpi-value">{num_areas}</div>
-            <div class="hero-kpi-label">Territories</div>
-        </div>
-        <div class="hero-kpi">
-            <div class="hero-kpi-icon">&#9879;</div>
-            <div class="hero-kpi-value">{total_groups}</div>
-            <div class="hero-kpi-label">Shepherds</div>
-        </div>
-        <div class="hero-kpi">
-            <div class="hero-kpi-icon">&#10025;</div>
-            <div class="hero-kpi-value">{total_members}</div>
-            <div class="hero-kpi-label">Souls Gathered</div>
-        </div>
-        <div class="hero-kpi">
-            <div class="hero-kpi-icon">&#9733;</div>
-            <div class="hero-kpi-value">{strong_count}</div>
-            <div class="hero-kpi-label">Strong Groups</div>
-        </div>
-        <div class="hero-kpi">
-            <div class="hero-kpi-icon">&#127793;</div>
-            <div class="hero-kpi-value">{weak_count}</div>
-            <div class="hero-kpi-label">Emerging</div>
-        </div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+hero_html = f"""<div class="hero-banner">\
+<div class="hero-shape hero-shape-1"></div>\
+<div class="hero-shape hero-shape-2"></div>\
+<div class="hero-shape hero-shape-3"></div>\
+<div class="hero-shape hero-shape-4"></div>\
+<div class="hero-content">\
+<div class="hero-badge">\
+<div class="hero-badge-dot"></div>\
+<span class="hero-badge-text">West Campus &middot; Hyderabad</span>\
+</div>\
+<div class="hero-title-line1">TKT Kingdom</div>\
+<div class="hero-title-line2">Expanding His Territory</div>\
+<div class="hero-scripture">\
+&ldquo;The harvest is plentiful, but the workers are few.\
+ Ask the Lord of the harvest to send out workers\
+ into his harvest field.&rdquo;\
+<br>&mdash; Matthew 9:37-38\
+</div>\
+</div>\
+<div class="hero-kpis">\
+<div class="hero-kpi">\
+<div class="hero-kpi-icon">&#127968;</div>\
+<div class="hero-kpi-value">{num_areas}</div>\
+<div class="hero-kpi-label">Territories</div>\
+</div>\
+<div class="hero-kpi">\
+<div class="hero-kpi-icon">&#9879;</div>\
+<div class="hero-kpi-value">{total_groups}</div>\
+<div class="hero-kpi-label">Shepherds</div>\
+</div>\
+<div class="hero-kpi">\
+<div class="hero-kpi-icon">&#10025;</div>\
+<div class="hero-kpi-value">{total_members}</div>\
+<div class="hero-kpi-label">Souls Gathered</div>\
+</div>\
+<div class="hero-kpi">\
+<div class="hero-kpi-icon">&#9733;</div>\
+<div class="hero-kpi-value">{strong_count}</div>\
+<div class="hero-kpi-label">Strong Groups</div>\
+</div>\
+<div class="hero-kpi">\
+<div class="hero-kpi-icon">&#127793;</div>\
+<div class="hero-kpi-value">{weak_count}</div>\
+<div class="hero-kpi-label">Emerging</div>\
+</div>\
+</div>\
+</div>"""
+st.markdown(hero_html, unsafe_allow_html=True)
 
 # --- Map ---
 st.markdown("""
