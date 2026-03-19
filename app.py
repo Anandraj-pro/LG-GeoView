@@ -507,6 +507,18 @@ st.markdown("""
         }
     }
 
+    /* Fix Streamlit sidebar icon rendering as text on mobile */
+    [data-testid="stSidebarCollapseButton"] button {
+        font-size: 0 !important;
+        width: 36px !important;
+        height: 36px !important;
+    }
+    [data-testid="stSidebarCollapseButton"] button::after {
+        content: "\\2630";
+        font-size: 20px;
+        color: var(--text-muted);
+    }
+
     /* --- Mobile Phone (max 480px) --- */
     @media screen and (max-width: 480px) {
         /* Streamlit layout fixes */

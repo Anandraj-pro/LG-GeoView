@@ -740,9 +740,14 @@ def build_territory_map(df: pd.DataFrame, summary_df: pd.DataFrame,
     m = folium.Map(
         location=center_coords,
         zoom_start=14,
+        tiles=None,
+    )
+    folium.TileLayer(
         tiles="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
         attr="Google Maps",
-    )
+        name="Google Maps",
+        control=False,
+    ).add_to(m)
 
     _apply_fixed_bounds(m, map_bounds)
 
@@ -1033,9 +1038,14 @@ def build_advanced_territory_map(
 
     m = folium.Map(
         location=center_coords, zoom_start=13,
+        tiles=None,
+    )
+    folium.TileLayer(
         tiles="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
         attr="Google Maps",
-    )
+        name="Google Maps",
+        control=False,
+    ).add_to(m)
 
     _apply_fixed_bounds(m, map_bounds)
 
@@ -1321,32 +1331,23 @@ def build_advanced_territory_map(
     # Mobile-responsive styles for map UI elements
     mobile_css = """
     <style>
-    @media screen and (max-width: 768px) {
-        .leaflet-control-layers {
-            max-width: 160px !important;
-            font-size: 11px !important;
-        }
-        .leaflet-control-layers label {
-            font-size: 11px !important;
-        }
-        div[style*="position: fixed"] {
-            max-width: 150px !important;
-            font-size: 10px !important;
-            padding: 8px 10px !important;
-            bottom: 10px !important;
-        }
+    .leaflet-control-layers {
+        max-width: 180px !important;
+        font-size: 12px !important;
     }
     @media screen and (max-width: 480px) {
         .leaflet-control-layers {
             max-width: 140px !important;
             font-size: 10px !important;
+            top: 5px !important;
+            right: 5px !important;
+        }
+        .leaflet-control-layers label {
+            font-size: 10px !important;
+            margin: 2px 0 !important;
         }
         div[style*="position: fixed"] {
-            max-width: 130px !important;
-            font-size: 9px !important;
-            padding: 6px 8px !important;
-            bottom: 5px !important;
-            right: 5px !important;
+            display: none !important;
         }
     }
     </style>
