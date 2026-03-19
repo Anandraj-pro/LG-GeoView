@@ -242,6 +242,11 @@ st.markdown("""
         letter-spacing: 2px;
     }
 
+    @keyframes shimmer {
+        0% { background-position: 100% center; }
+        100% { background-position: 0% center; }
+    }
+
     .hero-title-line1 {
         font-family: 'Cinzel', serif;
         font-size: 3rem;
@@ -261,13 +266,17 @@ st.markdown("""
         font-size: 2.2rem;
         font-weight: 700;
         letter-spacing: 3px;
-        background: linear-gradient(to right, #D4AF37, rgba(255,255,255,0.85), #D4AF37);
+        background: linear-gradient(90deg,
+            #D4AF37 0%, #D4AF37 40%,
+            #FFFFFF 50%,
+            #D4AF37 60%, #D4AF37 100%);
+        background-size: 250% 100%;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
         margin: 4px 0 0;
         line-height: 1.3;
-        animation: fadeUp 1s ease-out 0.7s both;
+        animation: fadeUp 1s ease-out 0.7s both, shimmer 3s linear infinite;
     }
 
     .hero-scripture {
@@ -454,7 +463,7 @@ with st.sidebar:
     <div style="text-align: center; padding: 8px 0 4px 0;">
         <div style="font-family: 'Cinzel', serif; font-size: 1.3rem;
              font-weight: 700; color: #8B6914; letter-spacing: 2px;">
-            &#10013; TKT Kingdom</div>
+            &#x2726; TKT Kingdom</div>
         <div style="font-family: 'Cormorant Garamond', serif;
              font-size: 0.85rem; color: #A0936E; font-style: italic;">
             West Campus &middot; Hyderabad</div>
@@ -598,27 +607,27 @@ hero_html = f"""<div class="hero-banner">\
 </div>\
 <div class="hero-kpis">\
 <div class="hero-kpi">\
-<div class="hero-kpi-icon">&#127968;</div>\
+<div class="hero-kpi-icon">&#x25C8;</div>\
 <div class="hero-kpi-value">{num_areas}</div>\
 <div class="hero-kpi-label">Territories</div>\
 </div>\
 <div class="hero-kpi">\
-<div class="hero-kpi-icon">&#9879;</div>\
+<div class="hero-kpi-icon">&#x2740;</div>\
 <div class="hero-kpi-value">{total_groups}</div>\
 <div class="hero-kpi-label">Shepherds</div>\
 </div>\
 <div class="hero-kpi">\
-<div class="hero-kpi-icon">&#10025;</div>\
+<div class="hero-kpi-icon">&#x2739;</div>\
 <div class="hero-kpi-value">{total_members}</div>\
 <div class="hero-kpi-label">Souls Gathered</div>\
 </div>\
 <div class="hero-kpi">\
-<div class="hero-kpi-icon">&#9733;</div>\
+<div class="hero-kpi-icon">&#x2605;</div>\
 <div class="hero-kpi-value">{strong_count}</div>\
 <div class="hero-kpi-label">Strong Groups</div>\
 </div>\
 <div class="hero-kpi">\
-<div class="hero-kpi-icon">&#127793;</div>\
+<div class="hero-kpi-icon">&#x2698;</div>\
 <div class="hero-kpi-value">{weak_count}</div>\
 <div class="hero-kpi-label">Emerging</div>\
 </div>\
@@ -630,7 +639,7 @@ st.markdown(hero_html, unsafe_allow_html=True)
 st.markdown("""
 <div style="font-family: 'Cinzel', serif; font-size: 1.1rem;
      color: #8B6914; letter-spacing: 2px; margin-bottom: 8px;">
-    &#9768; Kingdom Map</div>
+    &#x2726; Kingdom Map</div>
 """, unsafe_allow_html=True)
 map_tab1, map_tab2 = st.tabs(
     ["TKT Kingdom", "Territory Analysis"]
@@ -684,7 +693,7 @@ with map_tab2:
     st.markdown("""
     <div style="font-family: 'Cinzel', serif; font-size: 1rem;
          color: #8B6914; letter-spacing: 2px; margin-bottom: 4px;">
-        &#9879; Territory Analysis</div>
+        &#x2726; Territory Analysis</div>
     <div style="font-family: 'Cormorant Garamond', serif;
          font-size: 0.85rem; color: #A0936E; font-style: italic;
          margin-bottom: 12px;">
@@ -782,7 +791,7 @@ st.markdown("---")
 st.markdown("""
 <div style="font-family: 'Cinzel', serif; font-size: 1.1rem;
      color: #8B6914; letter-spacing: 2px; margin-bottom: 4px;">
-    &#9879; Territory Drill-Down</div>
+    &#x2726; Territory Drill-Down</div>
 <div style="font-family: 'Cormorant Garamond', serif;
      font-size: 0.85rem; color: #A0936E; font-style: italic;
      margin-bottom: 12px;">
@@ -857,7 +866,7 @@ st.markdown("---")
 st.markdown("""
 <div style="font-family: 'Cinzel', serif; font-size: 1.1rem;
      color: #8B6914; letter-spacing: 2px; margin-bottom: 4px;">
-    &#10025; Kingdom Insights</div>
+    &#x2726; Kingdom Insights</div>
 <div style="font-family: 'Cormorant Garamond', serif;
      font-size: 0.85rem; color: #A0936E; font-style: italic;
      margin-bottom: 12px;">
@@ -914,7 +923,7 @@ st.markdown("---")
 st.markdown("""
 <div style="font-family: 'Cinzel', serif; font-size: 1.1rem;
      color: #8B6914; letter-spacing: 2px; margin-bottom: 4px;">
-    &#127968; Territory Summary</div>
+    &#x2726; Territory Summary</div>
 <div style="font-family: 'Cormorant Garamond', serif;
      font-size: 0.85rem; color: #A0936E; font-style: italic;
      margin-bottom: 12px;">
