@@ -30,78 +30,98 @@ st.set_page_config(
 # --- Custom Styling ---
 st.markdown("""
 <style>
-    /* --- Kingdom Theme — Warm Parchment + Gold --- */
+    /* --- Theme Variables --- */
     @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap');
 
+    :root {
+        --bg: #0a0a0f;
+        --bg-secondary: #111118;
+        --bg-card: rgba(18,18,28,0.9);
+        --text: #e0ddd5;
+        --text-muted: #8a8578;
+        --text-heading: #D4AF37;
+        --accent: #D4AF37;
+        --accent-dim: rgba(212,175,55,0.25);
+        --border: rgba(212,175,55,0.15);
+        --sidebar-bg: linear-gradient(180deg, #0e0e16 0%, #121220 100%);
+        --scripture-bg: rgba(212,175,55,0.04);
+        --section-bg: rgba(18,18,28,0.6);
+    }
+
+    .light-mode {
+        --bg: #FFFBF0;
+        --bg-secondary: #F5EDD8;
+        --bg-card: rgba(255,251,240,0.9);
+        --text: #5D4E37;
+        --text-muted: #7A6B50;
+        --text-heading: #8B6914;
+        --accent: #D4AF37;
+        --accent-dim: rgba(212,175,55,0.15);
+        --border: rgba(212,175,55,0.25);
+        --sidebar-bg: linear-gradient(180deg, #FAF5E8 0%, #F5EDD8 100%);
+        --scripture-bg: rgba(212,175,55,0.05);
+        --section-bg: rgba(245,237,216,0.6);
+    }
+
     .stApp {
-        background: #FFFBF0 !important;
+        background: var(--bg) !important;
+        color: var(--text) !important;
     }
     .stApp > header { background-color: transparent; }
 
     /* Sidebar */
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #FAF5E8 0%, #F5EDD8 100%) !important;
-        border-right: 2px solid #D4AF3733 !important;
+        background: var(--sidebar-bg) !important;
+        border-right: 1px solid var(--border) !important;
     }
     [data-testid="stSidebar"] h1,
     [data-testid="stSidebar"] h2,
     [data-testid="stSidebar"] h3 {
         font-family: 'Cinzel', serif !important;
-        color: #5D4E37 !important;
+        color: var(--text-heading) !important;
+    }
+    [data-testid="stSidebar"] p,
+    [data-testid="stSidebar"] span,
+    [data-testid="stSidebar"] label {
+        color: var(--text-muted) !important;
     }
 
     /* Main headings */
     h1, h2, h3 {
         font-family: 'Cinzel', serif !important;
-        color: #5D4E37 !important;
+        color: var(--text-heading) !important;
         letter-spacing: 1px;
     }
-    p, span, label, .stMarkdown {
+    p, span, label, .stMarkdown, .stCaption {
         font-family: 'Cormorant Garamond', 'Palatino Linotype', serif !important;
-    }
-
-    /* KPI Metric Cards — parchment + gold */
-    .metric-card {
-        background: linear-gradient(135deg, #FFFBF0 0%, #F5EDD8 100%);
-        padding: 20px;
-        border-radius: 10px;
-        text-align: center;
-        border: 1px solid #D4AF3744;
-        box-shadow: 0 2px 8px rgba(139,105,20,0.08);
-    }
-    .metric-value {
-        font-family: 'Cinzel', serif;
-        font-size: 2.2rem;
-        font-weight: 700;
-        color: #8B6914;
-    }
-    .metric-label {
-        font-family: 'Cormorant Garamond', serif;
-        font-size: 0.9rem;
-        color: #7A6B50;
-        margin-top: 5px;
-        letter-spacing: 1px;
-        text-transform: uppercase;
+        color: var(--text) !important;
     }
 
     /* Divider lines */
     hr {
-        border-color: #D4AF3733 !important;
+        border-color: var(--border) !important;
     }
 
     /* Tabs */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
+        background: var(--bg-secondary) !important;
+        border-radius: 8px;
+        padding: 4px;
     }
     .stTabs [data-baseweb="tab"] {
         font-family: 'Cinzel', serif !important;
         letter-spacing: 1px;
+        color: var(--text-muted) !important;
+    }
+    .stTabs [aria-selected="true"] {
+        color: var(--accent) !important;
     }
 
     /* Tables */
     [data-testid="stDataFrame"] {
-        border: 1px solid #D4AF3722 !important;
+        border: 1px solid var(--border) !important;
         border-radius: 8px;
     }
 
@@ -112,6 +132,47 @@ st.markdown("""
         border: none !important;
         font-family: 'Cinzel', serif !important;
         letter-spacing: 1px;
+    }
+
+    /* Selectbox / Slider / Radio styling */
+    [data-testid="stSelectbox"] label,
+    [data-testid="stSlider"] label,
+    [data-testid="stRadio"] label,
+    [data-testid="stMultiSelect"] label {
+        color: var(--text) !important;
+    }
+
+    /* Metrics */
+    [data-testid="stMetricValue"] {
+        color: var(--accent) !important;
+    }
+    [data-testid="stMetricLabel"] {
+        color: var(--text-muted) !important;
+    }
+
+    /* Section backgrounds */
+    .kingdom-section-header {
+        background: var(--section-bg);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 16px 20px;
+        margin-top: 16px;
+    }
+    .kingdom-section-title {
+        font-family: 'Cinzel', serif;
+        color: var(--text-heading);
+        font-size: 14px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        text-align: center;
+    }
+    .kingdom-section-verse {
+        font-family: 'Cormorant Garamond', serif;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        font-style: italic;
+        text-align: center;
+        margin-top: 4px;
     }
 
     /* --- Hero Banner with Animated Shapes --- */
@@ -398,15 +459,15 @@ st.markdown("""
     .kingdom-scripture {
         font-family: 'Cormorant Garamond', serif;
         font-size: 1.05rem;
-        color: #7A6B50;
+        color: var(--text-muted);
         text-align: center;
         font-style: italic;
         padding: 16px 40px;
         margin: 16px 0;
-        border-left: 2px solid #D4AF3744;
-        border-right: 2px solid #D4AF3744;
+        border-left: 2px solid var(--border);
+        border-right: 2px solid var(--border);
         background: linear-gradient(90deg,
-                    rgba(212,175,55,0.05), transparent, rgba(212,175,55,0.05));
+                    var(--scripture-bg), transparent, var(--scripture-bg));
     }
 
     /* --- Responsive Styles (Tablet / Small Screens) --- */
@@ -525,14 +586,52 @@ with st.sidebar:
     st.markdown("""
     <div style="text-align: center; padding: 8px 0 4px 0;">
         <div style="font-family: 'Cinzel', serif; font-size: 1.3rem;
-             font-weight: 700; color: #8B6914; letter-spacing: 2px;">
+             font-weight: 700; color: var(--text-heading); letter-spacing: 2px;">
             &#x2726; TKT Kingdom</div>
         <div style="font-family: 'Cormorant Garamond', serif;
-             font-size: 0.85rem; color: #A0936E; font-style: italic;">
+             font-size: 0.85rem; color: var(--text-muted); font-style: italic;">
             West Campus &middot; Hyderabad</div>
     </div>
     """, unsafe_allow_html=True)
     st.markdown("---")
+
+    # Theme toggle
+    light_mode = st.toggle("Light Mode", value=False, key="theme_toggle")
+
+if light_mode:
+    st.markdown("""<style>
+    :root {
+        --bg: #FFFBF0 !important;
+        --bg-secondary: #F5EDD8 !important;
+        --bg-card: rgba(255,251,240,0.9) !important;
+        --text: #5D4E37 !important;
+        --text-muted: #7A6B50 !important;
+        --text-heading: #8B6914 !important;
+        --accent: #D4AF37 !important;
+        --accent-dim: rgba(212,175,55,0.15) !important;
+        --border: rgba(212,175,55,0.25) !important;
+        --sidebar-bg: linear-gradient(180deg,#FAF5E8 0%,#F5EDD8 100%) !important;
+        --scripture-bg: rgba(212,175,55,0.05) !important;
+        --section-bg: rgba(245,237,216,0.6) !important;
+    }
+    .hero-banner { background: #F5EDD8 !important; }
+    .hero-banner::after {
+        background: linear-gradient(to top,
+            #F5EDD8 0%, transparent 30%,
+            transparent 70%, rgba(245,237,216,0.8) 100%) !important;
+    }
+    .hero-title-line1 {
+        background: linear-gradient(to bottom, #5D4E37, #8B6914) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+    }
+    .hero-scripture { color: #7A6B50 !important; }
+    .hero-badge-text { color: #7A6B50 !important; }
+    .hero-badge-dot { background: #8B6914 !important; }
+    .hero-kpi::after { background: rgba(255,251,240,0.92) !important; }
+    .hero-kpi-label { color: #7A6B50 !important; }
+    .hero-shape { opacity: 0.4 !important; }
+    </style>""", unsafe_allow_html=True)
 
     # Data source selection
     st.subheader("Data Source")
@@ -626,10 +725,10 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("""
     <div style="font-family: 'Cormorant Garamond', serif;
-         font-size: 0.85rem; color: #A0936E; font-style: italic;
+         font-size: 0.85rem; color: var(--text-muted); font-style: italic;
          text-align: center; padding: 8px 12px; line-height: 1.5;">
         "Go and make disciples of all nations"
-        <br><span style="font-size: 0.75rem; color: #BFA76A;">
+        <br><span style="font-size: 0.75rem; color: var(--text-muted);">
         &mdash; Matthew 28:19</span>
     </div>
     """, unsafe_allow_html=True)
@@ -701,7 +800,7 @@ st.markdown(hero_html, unsafe_allow_html=True)
 # --- Map ---
 st.markdown("""
 <div style="font-family: 'Cinzel', serif; font-size: 1.1rem;
-     color: #8B6914; letter-spacing: 2px; margin-bottom: 8px;">
+     color: var(--text-heading); letter-spacing: 2px; margin-bottom: 8px;">
     &#x2726; Kingdom Map</div>
 """, unsafe_allow_html=True)
 map_tab1, map_tab2 = st.tabs(
@@ -712,10 +811,10 @@ with map_tab1:
     # --- Advanced Territory Analysis ---
     st.markdown("""
     <div style="font-family: 'Cinzel', serif; font-size: 1rem;
-         color: #8B6914; letter-spacing: 2px; margin-bottom: 4px;">
+         color: var(--text-heading); letter-spacing: 2px; margin-bottom: 4px;">
         &#x2726; Territory Analysis</div>
     <div style="font-family: 'Cormorant Garamond', serif;
-         font-size: 0.85rem; color: #A0936E; font-style: italic;
+         font-size: 0.85rem; color: var(--text-muted); font-style: italic;
          margin-bottom: 12px;">
         "Ask of me, and I will make the nations your inheritance,
         the ends of the earth your possession"
@@ -825,14 +924,14 @@ with map_tab2:
         st.error(f"Could not render Kingdom map: {e}")
 
     st.markdown("""
-    <div style="background: linear-gradient(145deg, #FAF5E8 0%, #F0E6CC 100%);
-         padding: 16px 20px; border-radius: 10px; border: 1px solid #D4AF3733;
+    <div style="background: var(--section-bg);
+         padding: 16px 20px; border-radius: 10px; border: 1px solid var(--border);
          margin-top: 16px;">
-        <div style="font-family: 'Cinzel', serif; color: #8B6914; font-size: 14px;
+        <div style="font-family: 'Cinzel', serif; color: var(--text-heading); font-size: 14px;
              letter-spacing: 2px; text-transform: uppercase;
              text-align: center;">Territory Report</div>
         <div style="font-family: 'Cormorant Garamond', serif;
-             font-size: 0.85rem; color: #A0936E; font-style: italic;
+             font-size: 0.85rem; color: var(--text-muted); font-style: italic;
              text-align: center; margin-top: 4px;">
             &ldquo;The Lord your God will bless you in all your harvest&rdquo;
             &mdash; Deuteronomy 16:15</div>
@@ -859,10 +958,10 @@ st.markdown("<div style='margin-top: 60px;'></div>", unsafe_allow_html=True)
 st.markdown("---")
 st.markdown("""
 <div style="font-family: 'Cinzel', serif; font-size: 1.1rem;
-     color: #8B6914; letter-spacing: 2px; margin-bottom: 4px;">
+     color: var(--text-heading); letter-spacing: 2px; margin-bottom: 4px;">
     &#x2726; Territory Drill-Down</div>
 <div style="font-family: 'Cormorant Garamond', serif;
-     font-size: 0.85rem; color: #A0936E; font-style: italic;
+     font-size: 0.85rem; color: var(--text-muted); font-style: italic;
      margin-bottom: 12px;">
     "Where two or three gather in my name, there am I with them"
     &mdash; Matthew 18:20</div>
@@ -934,10 +1033,10 @@ with dl_col2:
 st.markdown("---")
 st.markdown("""
 <div style="font-family: 'Cinzel', serif; font-size: 1.1rem;
-     color: #8B6914; letter-spacing: 2px; margin-bottom: 4px;">
+     color: var(--text-heading); letter-spacing: 2px; margin-bottom: 4px;">
     &#x2726; Kingdom Insights</div>
 <div style="font-family: 'Cormorant Garamond', serif;
-     font-size: 0.85rem; color: #A0936E; font-style: italic;
+     font-size: 0.85rem; color: var(--text-muted); font-style: italic;
      margin-bottom: 12px;">
     "For where your treasure is, there your heart will be also"
     &mdash; Matthew 6:21</div>
@@ -991,10 +1090,10 @@ with chart_col6:
 st.markdown("---")
 st.markdown("""
 <div style="font-family: 'Cinzel', serif; font-size: 1.1rem;
-     color: #8B6914; letter-spacing: 2px; margin-bottom: 4px;">
+     color: var(--text-heading); letter-spacing: 2px; margin-bottom: 4px;">
     &#x2726; Territory Summary</div>
 <div style="font-family: 'Cormorant Garamond', serif;
-     font-size: 0.85rem; color: #A0936E; font-style: italic;
+     font-size: 0.85rem; color: var(--text-muted); font-style: italic;
      margin-bottom: 12px;">
     "The earth is the Lord's, and everything in it"
     &mdash; Psalm 24:1</div>
@@ -1019,19 +1118,19 @@ st.markdown("---")
 st.markdown("""
 <div style="text-align: center; padding: 16px 0 8px 0;">
     <div style="font-family: 'Cormorant Garamond', serif;
-         font-size: 0.9rem; color: #A0936E; font-style: italic;
+         font-size: 0.9rem; color: var(--text-muted); font-style: italic;
          max-width: 500px; margin: 0 auto; line-height: 1.5;">
         "The harvest is plentiful, but the workers are few.
         Ask the Lord of the harvest to send out workers
         into his harvest field."
-        <br><span style="font-size: 0.8rem; color: #BFA76A;">
+        <br><span style="font-size: 0.8rem; color: var(--text-muted);">
         &mdash; Matthew 9:37-38</span>
     </div>
     <div style="width: 60px; height: 1px;
          background: linear-gradient(90deg, transparent, #D4AF37, transparent);
          margin: 12px auto;"></div>
     <div style="font-family: 'Cinzel', serif;
-         color: #A0936E; font-size: 0.75rem; letter-spacing: 2px;">
+         color: var(--text-muted); font-size: 0.75rem; letter-spacing: 2px;">
         TKT Kingdom v1.1 &nbsp;&middot;&nbsp; West Campus &nbsp;&middot;&nbsp; Hyderabad
     </div>
 </div>
