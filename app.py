@@ -27,6 +27,13 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# --- Viewport meta for mobile ---
+st.markdown(
+    '<meta name="viewport" content="width=device-width, '
+    'initial-scale=1.0, maximum-scale=1.0, user-scalable=no">',
+    unsafe_allow_html=True,
+)
+
 # --- Custom Styling ---
 st.markdown("""
 <style>
@@ -470,19 +477,27 @@ st.markdown("""
                     var(--scripture-bg), transparent, var(--scripture-bg));
     }
 
-    /* --- Responsive Styles (Tablet / Small Screens) --- */
+    /* --- Tablet (481px - 768px) --- */
     @media screen and (max-width: 768px) {
-        .hero-banner { padding: 32px 16px 24px; min-height: 280px; }
+        .main .block-container {
+            padding: 1rem 1rem !important;
+        }
+        .hero-banner {
+            padding: 28px 16px 24px;
+            min-height: 260px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
         .hero-title-line1 { font-size: 1.8rem; letter-spacing: 3px; }
         .hero-title-line2 { font-size: 1.3rem; letter-spacing: 2px; }
-        .hero-scripture { font-size: 0.8rem; padding: 0 8px; }
+        .hero-scripture { font-size: 0.8rem; padding: 0 12px; }
         .hero-kpis { gap: 8px; }
-        .hero-kpi { padding: 8px 12px; min-width: 80px; }
-        .hero-kpi-value { font-size: 1.2rem; }
+        .hero-kpi { padding: 10px 14px; min-width: 90px; }
+        .hero-kpi-value { font-size: 1.3rem; }
         .hero-kpi-label { font-size: 0.65rem; }
         .hero-shape-1, .hero-shape-2 { display: none; }
         [data-testid="column"] {
-            min-width: 120px !important;
+            min-width: 100px !important;
         }
         .js-plotly-plot, .plotly, .plot-container {
             max-height: 300px;
@@ -490,6 +505,129 @@ st.markdown("""
         iframe {
             height: 500px !important;
         }
+    }
+
+    /* --- Mobile Phone (max 480px) --- */
+    @media screen and (max-width: 480px) {
+        /* Streamlit layout fixes */
+        .main .block-container {
+            padding: 0.5rem 0.5rem !important;
+            max-width: 100% !important;
+        }
+        [data-testid="stSidebar"] {
+            min-width: 260px !important;
+            max-width: 280px !important;
+        }
+        [data-testid="stHorizontalBlock"] {
+            flex-wrap: wrap !important;
+            gap: 4px !important;
+        }
+        [data-testid="column"] {
+            min-width: 45% !important;
+            flex: 1 1 45% !important;
+        }
+
+        /* Hero banner — compact */
+        .hero-banner {
+            padding: 20px 12px 18px;
+            min-height: 220px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+        }
+        .hero-badge {
+            padding: 3px 10px;
+            margin-bottom: 12px;
+        }
+        .hero-badge-text { font-size: 0.7rem !important; }
+        .hero-title-line1 {
+            font-size: 1.4rem !important;
+            letter-spacing: 2px !important;
+        }
+        .hero-title-line2 {
+            font-size: 1rem !important;
+            letter-spacing: 1px !important;
+        }
+        .hero-scripture {
+            font-size: 0.72rem !important;
+            padding: 0 4px !important;
+            margin-top: 10px !important;
+            line-height: 1.4 !important;
+        }
+
+        /* KPIs — 3+2 grid on mobile */
+        .hero-kpis {
+            gap: 6px !important;
+            margin-top: 16px !important;
+        }
+        .hero-kpi {
+            padding: 8px 10px !important;
+            min-width: 28% !important;
+            flex: 1 1 28% !important;
+            border-radius: 10px !important;
+        }
+        .hero-kpi-icon { font-size: 0.9rem !important; }
+        .hero-kpi-value { font-size: 1.1rem !important; }
+        .hero-kpi-label {
+            font-size: 0.55rem !important;
+            letter-spacing: 1px !important;
+        }
+
+        /* Hide floating shapes on mobile */
+        .hero-shape { display: none !important; }
+
+        /* Map height — shorter on mobile */
+        iframe {
+            height: 400px !important;
+        }
+
+        /* Charts — compact */
+        .js-plotly-plot, .plotly, .plot-container {
+            max-height: 250px !important;
+        }
+
+        /* Section headers — smaller */
+        .kingdom-scripture {
+            padding: 10px 12px !important;
+            font-size: 0.85rem !important;
+        }
+
+        /* Tables — horizontal scroll */
+        [data-testid="stDataFrame"] {
+            overflow-x: auto !important;
+        }
+
+        /* Download buttons — stack */
+        .stDownloadButton {
+            width: 100% !important;
+        }
+        .stDownloadButton button {
+            width: 100% !important;
+            font-size: 0.8rem !important;
+            padding: 8px !important;
+        }
+
+        /* Tabs — smaller text */
+        .stTabs [data-baseweb="tab"] {
+            font-size: 0.75rem !important;
+            letter-spacing: 0.5px !important;
+            padding: 8px 12px !important;
+        }
+
+        /* Footer — compact */
+        .kingdom-footer {
+            padding: 8px 0 !important;
+        }
+    }
+
+    /* --- Very small screens (max 360px) --- */
+    @media screen and (max-width: 360px) {
+        .hero-title-line1 { font-size: 1.2rem !important; }
+        .hero-title-line2 { font-size: 0.85rem !important; }
+        .hero-kpi {
+            min-width: 44% !important;
+            flex: 1 1 44% !important;
+        }
+        .hero-kpi-value { font-size: 1rem !important; }
     }
 
     /* --- Print Styles (A4) --- */
