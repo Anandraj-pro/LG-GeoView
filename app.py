@@ -587,10 +587,10 @@ with st.sidebar:
     <div style="text-align: center; padding: 8px 0 4px 0;">
         <div style="font-family: 'Cinzel', serif; font-size: 1.3rem;
              font-weight: 700; color: var(--text-heading); letter-spacing: 2px;">
-            &#x2726; TKT Kingdom</div>
+            &#x2666; TKT Kingdom</div>
         <div style="font-family: 'Cormorant Garamond', serif;
              font-size: 0.85rem; color: var(--text-muted); font-style: italic;">
-            West Campus &middot; Hyderabad</div>
+            West Campus &#183; Hyderabad</div>
     </div>
     """, unsafe_allow_html=True)
     st.markdown("---")
@@ -729,7 +729,7 @@ with st.sidebar:
          text-align: center; padding: 8px 12px; line-height: 1.5;">
         "Go and make disciples of all nations"
         <br><span style="font-size: 0.75rem; color: var(--text-muted);">
-        &mdash; Matthew 28:19</span>
+        - Matthew 28:19</span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -756,30 +756,30 @@ hero_html = f"""<div class="hero-banner">\
 <div class="hero-content">\
 <div class="hero-badge">\
 <div class="hero-badge-dot"></div>\
-<span class="hero-badge-text">West Campus &middot; Hyderabad</span>\
+<span class="hero-badge-text">West Campus &#183; Hyderabad</span>\
 </div>\
 <div class="hero-title-line1">TKT Kingdom</div>\
 <div class="hero-title-line2">Expanding His Territory</div>\
 <div class="hero-scripture">\
-&ldquo;The harvest is plentiful, but the workers are few.\
+"The harvest is plentiful, but the workers are few.\
  Ask the Lord of the harvest to send out workers\
- into his harvest field.&rdquo;\
-<br>&mdash; Matthew 9:37-38\
+ into his harvest field."\
+<br>- Matthew 9:37-38\
 </div>\
 </div>\
 <div class="hero-kpis">\
 <div class="hero-kpi">\
-<div class="hero-kpi-icon">&#x25C8;</div>\
+<div class="hero-kpi-icon">&#x25A0;</div>\
 <div class="hero-kpi-value">{num_areas}</div>\
 <div class="hero-kpi-label">Territories</div>\
 </div>\
 <div class="hero-kpi">\
-<div class="hero-kpi-icon">&#x2740;</div>\
+<div class="hero-kpi-icon">&#x2666;</div>\
 <div class="hero-kpi-value">{total_groups}</div>\
 <div class="hero-kpi-label">Shepherds</div>\
 </div>\
 <div class="hero-kpi">\
-<div class="hero-kpi-icon">&#x2739;</div>\
+<div class="hero-kpi-icon">&#x2022;</div>\
 <div class="hero-kpi-value">{total_members}</div>\
 <div class="hero-kpi-label">Souls Gathered</div>\
 </div>\
@@ -789,7 +789,7 @@ hero_html = f"""<div class="hero-banner">\
 <div class="hero-kpi-label">Strong Groups</div>\
 </div>\
 <div class="hero-kpi">\
-<div class="hero-kpi-icon">&#x2698;</div>\
+<div class="hero-kpi-icon">&#x25CB;</div>\
 <div class="hero-kpi-value">{weak_count}</div>\
 <div class="hero-kpi-label">Emerging</div>\
 </div>\
@@ -801,7 +801,7 @@ st.markdown(hero_html, unsafe_allow_html=True)
 st.markdown("""
 <div style="font-family: 'Cinzel', serif; font-size: 1.1rem;
      color: var(--text-heading); letter-spacing: 2px; margin-bottom: 8px;">
-    &#x2726; Kingdom Map</div>
+    &#x2666; Kingdom Map</div>
 """, unsafe_allow_html=True)
 map_tab1, map_tab2 = st.tabs(
     ["Territory Analysis", "TKT Kingdom"]
@@ -812,13 +812,13 @@ with map_tab1:
     st.markdown("""
     <div style="font-family: 'Cinzel', serif; font-size: 1rem;
          color: var(--text-heading); letter-spacing: 2px; margin-bottom: 4px;">
-        &#x2726; Territory Analysis</div>
+        &#x2666; Territory Analysis</div>
     <div style="font-family: 'Cormorant Garamond', serif;
          font-size: 0.85rem; color: var(--text-muted); font-style: italic;
          margin-bottom: 12px;">
         "Ask of me, and I will make the nations your inheritance,
         the ends of the earth your possession"
-        &mdash; Psalm 2:8</div>
+        - Psalm 2:8</div>
     """, unsafe_allow_html=True)
     st.caption("Toggle layers using the checkboxes on the map. "
                "Click any territory for detailed stats.")
@@ -933,8 +933,8 @@ with map_tab2:
         <div style="font-family: 'Cormorant Garamond', serif;
              font-size: 0.85rem; color: var(--text-muted); font-style: italic;
              text-align: center; margin-top: 4px;">
-            &ldquo;The Lord your God will bless you in all your harvest&rdquo;
-            &mdash; Deuteronomy 16:15</div>
+            "The Lord your God will bless you in all your harvest"
+            - Deuteronomy 16:15</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -959,12 +959,12 @@ st.markdown("---")
 st.markdown("""
 <div style="font-family: 'Cinzel', serif; font-size: 1.1rem;
      color: var(--text-heading); letter-spacing: 2px; margin-bottom: 4px;">
-    &#x2726; Territory Drill-Down</div>
+    &#x2666; Territory Drill-Down</div>
 <div style="font-family: 'Cormorant Garamond', serif;
      font-size: 0.85rem; color: var(--text-muted); font-style: italic;
      margin-bottom: 12px;">
     "Where two or three gather in my name, there am I with them"
-    &mdash; Matthew 18:20</div>
+    - Matthew 18:20</div>
 """, unsafe_allow_html=True)
 
 # Show "All Areas" by default, with option to filter
@@ -1034,12 +1034,12 @@ st.markdown("---")
 st.markdown("""
 <div style="font-family: 'Cinzel', serif; font-size: 1.1rem;
      color: var(--text-heading); letter-spacing: 2px; margin-bottom: 4px;">
-    &#x2726; Kingdom Insights</div>
+    &#x2666; Kingdom Insights</div>
 <div style="font-family: 'Cormorant Garamond', serif;
      font-size: 0.85rem; color: var(--text-muted); font-style: italic;
      margin-bottom: 12px;">
     "For where your treasure is, there your heart will be also"
-    &mdash; Matthew 6:21</div>
+    - Matthew 6:21</div>
 """, unsafe_allow_html=True)
 
 chart_col1, chart_col2 = st.columns(2)
@@ -1091,12 +1091,12 @@ st.markdown("---")
 st.markdown("""
 <div style="font-family: 'Cinzel', serif; font-size: 1.1rem;
      color: var(--text-heading); letter-spacing: 2px; margin-bottom: 4px;">
-    &#x2726; Territory Summary</div>
+    &#x2666; Territory Summary</div>
 <div style="font-family: 'Cormorant Garamond', serif;
      font-size: 0.85rem; color: var(--text-muted); font-style: italic;
      margin-bottom: 12px;">
     "The earth is the Lord's, and everything in it"
-    &mdash; Psalm 24:1</div>
+    - Psalm 24:1</div>
 """, unsafe_allow_html=True)
 summary_df = get_area_summary(df_filtered)
 st.dataframe(
@@ -1124,14 +1124,14 @@ st.markdown("""
         Ask the Lord of the harvest to send out workers
         into his harvest field."
         <br><span style="font-size: 0.8rem; color: var(--text-muted);">
-        &mdash; Matthew 9:37-38</span>
+        - Matthew 9:37-38</span>
     </div>
     <div style="width: 60px; height: 1px;
          background: linear-gradient(90deg, transparent, #D4AF37, transparent);
          margin: 12px auto;"></div>
     <div style="font-family: 'Cinzel', serif;
          color: var(--text-muted); font-size: 0.75rem; letter-spacing: 2px;">
-        TKT Kingdom v1.1 &nbsp;&middot;&nbsp; West Campus &nbsp;&middot;&nbsp; Hyderabad
+        TKT Kingdom v1.1 &#183; West Campus &#183; Hyderabad
     </div>
 </div>
 """, unsafe_allow_html=True)
