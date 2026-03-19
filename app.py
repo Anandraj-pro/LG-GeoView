@@ -114,86 +114,215 @@ st.markdown("""
         letter-spacing: 1px;
     }
 
-    /* --- King's Kingdom View Styles --- */
-    .kingdom-header {
-        background: linear-gradient(145deg, #FAF5E8 0%, #F0E6CC 50%, #E8DCBE 100%);
-        padding: 28px 32px;
-        border-radius: 12px;
-        border: 1px solid #D4AF3744;
-        box-shadow: 0 2px 12px rgba(139, 105, 20, 0.1);
-        text-align: center;
-        margin-bottom: 20px;
-        position: relative;
-        overflow: hidden;
+    /* --- Hero Banner with Animated Shapes --- */
+    @keyframes float1 {
+        0%, 100% { transform: translateY(0) rotate(12deg); }
+        50% { transform: translateY(-18px) rotate(14deg); }
     }
-    .kingdom-header::before {
+    @keyframes float2 {
+        0%, 100% { transform: translateY(0) rotate(-15deg); }
+        50% { transform: translateY(15px) rotate(-13deg); }
+    }
+    @keyframes float3 {
+        0%, 100% { transform: translateY(0) rotate(-8deg); }
+        50% { transform: translateY(-12px) rotate(-6deg); }
+    }
+    @keyframes float4 {
+        0%, 100% { transform: translateY(0) rotate(20deg); }
+        50% { transform: translateY(10px) rotate(22deg); }
+    }
+    @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero-banner {
+        position: relative;
+        background: #0a0a0a;
+        border-radius: 16px;
+        padding: 48px 32px 36px;
+        margin-bottom: 24px;
+        overflow: hidden;
+        min-height: 340px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    .hero-banner::before {
         content: '';
         position: absolute;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background: radial-gradient(ellipse at 50% 0%,
-                    rgba(212, 175, 55, 0.08) 0%, transparent 70%);
+        inset: 0;
+        background: radial-gradient(ellipse at 30% 20%,
+                    rgba(139,92,246,0.06) 0%, transparent 50%),
+                    radial-gradient(ellipse at 70% 80%,
+                    rgba(212,175,55,0.06) 0%, transparent 50%);
         pointer-events: none;
     }
-    .kingdom-title {
-        font-family: 'Cinzel', 'Palatino Linotype', serif;
-        font-size: 1.8rem;
-        font-weight: 700;
-        color: #8B6914;
-        letter-spacing: 4px;
-        text-transform: uppercase;
-        margin: 0;
-    }
-    .kingdom-subtitle {
-        font-family: 'Cormorant Garamond', 'Palatino Linotype', serif;
-        font-size: 1rem;
-        color: #7A6B50;
-        letter-spacing: 2px;
-        margin-top: 6px;
-        font-style: italic;
-    }
-    .kingdom-divider {
-        width: 60px;
-        height: 2px;
-        background: linear-gradient(90deg, transparent, #D4AF37, transparent);
-        margin: 12px auto;
-    }
-
-    .kingdom-metric {
-        background: linear-gradient(145deg, #FFFBF0 0%, #F5EDD8 100%);
-        padding: 18px 14px;
-        border-radius: 10px;
-        text-align: center;
-        border: 1px solid #D4AF3733;
-        box-shadow: 0 2px 8px rgba(139, 105, 20, 0.08);
-        position: relative;
-        overflow: hidden;
-    }
-    .kingdom-metric::after {
+    .hero-banner::after {
         content: '';
         position: absolute;
-        top: 0; left: 0; right: 0;
-        height: 2px;
-        background: linear-gradient(90deg, transparent, #D4AF37, transparent);
-    }
-    .kingdom-metric-icon {
-        font-size: 1.4rem;
-        margin-bottom: 4px;
-    }
-    .kingdom-metric-value {
-        font-family: 'Cinzel', serif;
-        font-size: 2rem;
-        font-weight: 700;
-        color: #8B6914;
-    }
-    .kingdom-metric-label {
-        font-family: 'Cormorant Garamond', serif;
-        font-size: 0.85rem;
-        color: #7A6B50;
-        letter-spacing: 1.5px;
-        text-transform: uppercase;
-        margin-top: 4px;
+        inset: 0;
+        background: linear-gradient(to top,
+                    #0a0a0a 0%, transparent 30%, transparent 70%, rgba(10,10,10,0.8) 100%);
+        pointer-events: none;
+        z-index: 1;
     }
 
+    /* Floating elegant shapes */
+    .hero-shape {
+        position: absolute;
+        border-radius: 50%;
+        border: 2px solid rgba(255,255,255,0.08);
+        backdrop-filter: blur(2px);
+        box-shadow: 0 8px 32px rgba(255,255,255,0.05);
+        pointer-events: none;
+    }
+    .hero-shape::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        background: radial-gradient(circle at 50% 50%,
+                    rgba(255,255,255,0.12), transparent 70%);
+    }
+    .hero-shape-1 {
+        width: 500px; height: 120px;
+        left: -8%; top: 18%;
+        background: linear-gradient(to right, rgba(212,175,55,0.12), transparent);
+        animation: float1 12s ease-in-out infinite;
+    }
+    .hero-shape-2 {
+        width: 400px; height: 100px;
+        right: -3%; top: 72%;
+        background: linear-gradient(to right, rgba(139,92,246,0.10), transparent);
+        animation: float2 14s ease-in-out infinite;
+    }
+    .hero-shape-3 {
+        width: 250px; height: 70px;
+        left: 8%; bottom: 8%;
+        background: linear-gradient(to right, rgba(212,175,55,0.08), transparent);
+        animation: float3 10s ease-in-out infinite;
+    }
+    .hero-shape-4 {
+        width: 180px; height: 50px;
+        right: 18%; top: 10%;
+        background: linear-gradient(to right, rgba(244,114,182,0.08), transparent);
+        animation: float4 11s ease-in-out infinite;
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 2;
+        text-align: center;
+        max-width: 700px;
+        margin: 0 auto;
+    }
+
+    .hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 14px;
+        border-radius: 50px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.08);
+        margin-bottom: 20px;
+        animation: fadeUp 1s ease-out 0.3s both;
+    }
+    .hero-badge-dot {
+        width: 8px; height: 8px;
+        border-radius: 50%;
+        background: #D4AF37;
+    }
+    .hero-badge-text {
+        font-family: 'Cormorant Garamond', serif !important;
+        font-size: 0.85rem;
+        color: rgba(255,255,255,0.5);
+        letter-spacing: 2px;
+    }
+
+    .hero-title-line1 {
+        font-family: 'Cinzel', serif;
+        font-size: 3rem;
+        font-weight: 900;
+        letter-spacing: 5px;
+        text-transform: uppercase;
+        background: linear-gradient(to bottom, #ffffff, rgba(255,255,255,0.8));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin: 0;
+        line-height: 1.2;
+        animation: fadeUp 1s ease-out 0.5s both;
+    }
+    .hero-title-line2 {
+        font-family: 'Cinzel', serif;
+        font-size: 2.2rem;
+        font-weight: 700;
+        letter-spacing: 3px;
+        background: linear-gradient(to right, #D4AF37, rgba(255,255,255,0.85), #D4AF37);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin: 4px 0 0;
+        line-height: 1.3;
+        animation: fadeUp 1s ease-out 0.7s both;
+    }
+
+    .hero-scripture {
+        font-family: 'Cormorant Garamond', serif !important;
+        font-size: 0.95rem;
+        color: rgba(255,255,255,0.3);
+        font-style: italic;
+        margin-top: 18px;
+        line-height: 1.6;
+        max-width: 480px;
+        margin-left: auto;
+        margin-right: auto;
+        animation: fadeUp 1s ease-out 0.9s both;
+    }
+
+    /* Hero KPI row inside banner */
+    .hero-kpis {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+        margin-top: 28px;
+        flex-wrap: wrap;
+        animation: fadeUp 1s ease-out 1.1s both;
+    }
+    .hero-kpi {
+        text-align: center;
+        padding: 12px 20px;
+        min-width: 110px;
+        border-radius: 10px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.06);
+        backdrop-filter: blur(4px);
+    }
+    .hero-kpi-icon {
+        font-size: 1.1rem;
+        margin-bottom: 2px;
+    }
+    .hero-kpi-value {
+        font-family: 'Cinzel', serif;
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #D4AF37;
+    }
+    .hero-kpi-label {
+        font-family: 'Cormorant Garamond', serif;
+        font-size: 0.75rem;
+        color: rgba(255,255,255,0.4);
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        margin-top: 2px;
+    }
+
+    /* Kingdom section headers */
     .kingdom-scripture {
         font-family: 'Cormorant Garamond', serif;
         font-size: 1.05rem;
@@ -210,24 +339,21 @@ st.markdown("""
 
     /* --- Responsive Styles (Tablet / Small Screens) --- */
     @media screen and (max-width: 768px) {
-        .metric-card {
-            padding: 12px 8px;
-        }
-        .metric-value {
-            font-size: 1.5rem;
-        }
-        .metric-label {
-            font-size: 0.75rem;
-        }
-        /* Let Streamlit stack columns naturally on narrow screens */
+        .hero-banner { padding: 32px 16px 24px; min-height: 280px; }
+        .hero-title-line1 { font-size: 1.8rem; letter-spacing: 3px; }
+        .hero-title-line2 { font-size: 1.3rem; letter-spacing: 2px; }
+        .hero-scripture { font-size: 0.8rem; padding: 0 8px; }
+        .hero-kpis { gap: 8px; }
+        .hero-kpi { padding: 8px 12px; min-width: 80px; }
+        .hero-kpi-value { font-size: 1.2rem; }
+        .hero-kpi-label { font-size: 0.65rem; }
+        .hero-shape-1, .hero-shape-2 { display: none; }
         [data-testid="column"] {
             min-width: 120px !important;
         }
-        /* Reduce chart heights for smaller viewports */
         .js-plotly-plot, .plotly, .plot-container {
             max-height: 300px;
         }
-        /* Map iframe */
         iframe {
             height: 500px !important;
         }
@@ -451,58 +577,60 @@ avg_per_group = total_members / total_groups if total_groups > 0 else 0
 strong_count = len(df_filtered[df_filtered["strength"] == "Strong"])
 weak_count = len(df_filtered[df_filtered["strength"] == "Weak"])
 
-st.markdown("""
-<div class="kingdom-header">
-    <div class="kingdom-title">&#9768; TKT Kingdom</div>
-    <div class="kingdom-divider"></div>
-    <div class="kingdom-subtitle">West Campus &mdash; Hyderabad</div>
-</div>
-""", unsafe_allow_html=True)
+st.markdown(f"""
+<div class="hero-banner">
+    <!-- Animated floating shapes -->
+    <div class="hero-shape hero-shape-1"></div>
+    <div class="hero-shape hero-shape-2"></div>
+    <div class="hero-shape hero-shape-3"></div>
+    <div class="hero-shape hero-shape-4"></div>
 
-# Kingdom KPI metrics — main page banner
-kk1, kk2, kk3, kk4, kk5 = st.columns(5)
-with kk1:
-    st.markdown(f"""
-    <div class="kingdom-metric">
-        <div class="kingdom-metric-icon">&#127968;</div>
-        <div class="kingdom-metric-value">{num_areas}</div>
-        <div class="kingdom-metric-label">Territories</div>
-    </div>""", unsafe_allow_html=True)
-with kk2:
-    st.markdown(f"""
-    <div class="kingdom-metric">
-        <div class="kingdom-metric-icon">&#9879;</div>
-        <div class="kingdom-metric-value">{total_groups}</div>
-        <div class="kingdom-metric-label">Shepherds</div>
-    </div>""", unsafe_allow_html=True)
-with kk3:
-    st.markdown(f"""
-    <div class="kingdom-metric">
-        <div class="kingdom-metric-icon">&#10025;</div>
-        <div class="kingdom-metric-value">{total_members}</div>
-        <div class="kingdom-metric-label">Souls Gathered</div>
-    </div>""", unsafe_allow_html=True)
-with kk4:
-    st.markdown(f"""
-    <div class="kingdom-metric">
-        <div class="kingdom-metric-icon">&#9733;</div>
-        <div class="kingdom-metric-value">{strong_count}</div>
-        <div class="kingdom-metric-label">Strong Groups</div>
-    </div>""", unsafe_allow_html=True)
-with kk5:
-    st.markdown(f"""
-    <div class="kingdom-metric">
-        <div class="kingdom-metric-icon">&#127793;</div>
-        <div class="kingdom-metric-value">{weak_count}</div>
-        <div class="kingdom-metric-label">Emerging</div>
-    </div>""", unsafe_allow_html=True)
+    <!-- Content -->
+    <div class="hero-content">
+        <div class="hero-badge">
+            <div class="hero-badge-dot"></div>
+            <span class="hero-badge-text">West Campus &middot; Hyderabad</span>
+        </div>
 
-# Scripture below banner
-st.markdown("""
-<div class="kingdom-scripture">
-    "The harvest is plentiful, but the workers are few.
-    Ask the Lord of the harvest to send out workers into his harvest field."
-    <br><span style="color: #BFA76A; font-size: 0.85rem;">&mdash; Matthew 9:37-38</span>
+        <h1 class="hero-title-line1">TKT Kingdom</h1>
+        <p class="hero-title-line2">Expanding His Territory</p>
+
+        <p class="hero-scripture">
+            &ldquo;The harvest is plentiful, but the workers are few.
+            Ask the Lord of the harvest to send out workers
+            into his harvest field.&rdquo;
+            <br>&mdash; Matthew 9:37-38
+        </p>
+    </div>
+
+    <!-- KPI row embedded in hero -->
+    <div class="hero-kpis">
+        <div class="hero-kpi">
+            <div class="hero-kpi-icon">&#127968;</div>
+            <div class="hero-kpi-value">{num_areas}</div>
+            <div class="hero-kpi-label">Territories</div>
+        </div>
+        <div class="hero-kpi">
+            <div class="hero-kpi-icon">&#9879;</div>
+            <div class="hero-kpi-value">{total_groups}</div>
+            <div class="hero-kpi-label">Shepherds</div>
+        </div>
+        <div class="hero-kpi">
+            <div class="hero-kpi-icon">&#10025;</div>
+            <div class="hero-kpi-value">{total_members}</div>
+            <div class="hero-kpi-label">Souls Gathered</div>
+        </div>
+        <div class="hero-kpi">
+            <div class="hero-kpi-icon">&#9733;</div>
+            <div class="hero-kpi-value">{strong_count}</div>
+            <div class="hero-kpi-label">Strong Groups</div>
+        </div>
+        <div class="hero-kpi">
+            <div class="hero-kpi-icon">&#127793;</div>
+            <div class="hero-kpi-value">{weak_count}</div>
+            <div class="hero-kpi-label">Emerging</div>
+        </div>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
