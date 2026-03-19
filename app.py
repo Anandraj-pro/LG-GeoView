@@ -223,12 +223,37 @@ st.markdown("""
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        padding: 4px 14px;
+        padding: 5px 16px;
         border-radius: 50px;
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.08);
+        background: rgba(10,10,20,0.8);
+        border: none;
         margin-bottom: 20px;
         animation: fadeUp 1s ease-out 0.3s both;
+        position: relative;
+        overflow: hidden;
+        isolation: isolate;
+    }
+    .hero-badge::before {
+        content: '';
+        position: absolute;
+        top: -50%; left: -50%;
+        width: 200%; height: 200%;
+        background: conic-gradient(
+            from 0deg,
+            transparent 0deg, transparent 120deg,
+            rgba(212,175,55,0.5) 180deg,
+            transparent 240deg, transparent 360deg
+        );
+        animation: moveBorder 3s linear infinite;
+        z-index: -2;
+    }
+    .hero-badge::after {
+        content: '';
+        position: absolute;
+        inset: 1.5px;
+        border-radius: 50px;
+        background: rgba(10,10,20,0.9);
+        z-index: -1;
     }
     .hero-badge-dot {
         width: 8px; height: 8px;
@@ -292,25 +317,63 @@ st.markdown("""
         animation: fadeUp 1s ease-out 0.9s both;
     }
 
+    /* Moving border animation */
+    @keyframes moveBorder {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
     /* Hero KPI row inside banner */
     .hero-kpis {
         position: relative;
         z-index: 2;
         display: flex;
         justify-content: center;
-        gap: 16px;
+        gap: 18px;
         margin-top: 28px;
         flex-wrap: wrap;
         animation: fadeUp 1s ease-out 1.1s both;
     }
     .hero-kpi {
         text-align: center;
-        padding: 12px 20px;
-        min-width: 110px;
-        border-radius: 10px;
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.06);
-        backdrop-filter: blur(4px);
+        padding: 14px 22px;
+        min-width: 115px;
+        border-radius: 14px;
+        background: rgba(15,15,25,0.8);
+        border: 1px solid rgba(255,255,255,0.08);
+        backdrop-filter: blur(12px);
+        position: relative;
+        overflow: hidden;
+        isolation: isolate;
+    }
+    .hero-kpi::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: conic-gradient(
+            from 0deg,
+            transparent 0deg,
+            transparent 60deg,
+            rgba(212,175,55,0.4) 80deg,
+            rgba(139,92,246,0.3) 120deg,
+            transparent 150deg,
+            transparent 300deg,
+            rgba(212,175,55,0.3) 330deg,
+            transparent 360deg
+        );
+        animation: moveBorder 4s linear infinite;
+        z-index: -2;
+    }
+    .hero-kpi::after {
+        content: '';
+        position: absolute;
+        inset: 1.5px;
+        border-radius: 13px;
+        background: rgba(10,10,20,0.92);
+        z-index: -1;
     }
     .hero-kpi-icon {
         font-size: 1.1rem;
@@ -325,7 +388,7 @@ st.markdown("""
     .hero-kpi-label {
         font-family: 'Cormorant Garamond', serif;
         font-size: 0.75rem;
-        color: rgba(255,255,255,0.4);
+        color: rgba(255,255,255,0.45);
         letter-spacing: 1.5px;
         text-transform: uppercase;
         margin-top: 2px;
