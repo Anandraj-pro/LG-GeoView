@@ -11,7 +11,8 @@ from src.data_loader import (
 )
 from src.map_builder import (
     build_map, build_detailed_map, build_kingdom_map,
-    build_territory_map, MAP_STYLES,
+    build_advanced_territory_map,
+    generate_territory_kml, MAP_STYLES,
 )
 from src.charts import (  # noqa: F401
     members_by_area_chart, groups_by_area_chart, strength_pie_chart,
@@ -567,52 +568,91 @@ with map_tab3:
     st.dataframe(territory_data, use_container_width=True, hide_index=True)
 
 with map_tab4:
-    # --- Territory View ---
-    st.markdown("""
-    <div style="background: linear-gradient(145deg, #1e1e2f 0%, #252540 100%);
-         padding: 22px 28px; border-radius: 10px; border: 1px solid #444;
-         box-shadow: 0 2px 16px rgba(0,0,0,0.3); text-align: center;
-         margin-bottom: 16px;">
-        <div style="font-family: 'Cinzel', serif; font-size: 1.4rem;
-             font-weight: 700; color: #ccc; letter-spacing: 3px;
-             text-transform: uppercase;">Territory View</div>
-        <div style="width: 50px; height: 2px;
-             background: linear-gradient(90deg, transparent, #888, transparent);
-             margin: 10px auto;"></div>
-        <div style="font-family: 'Cormorant Garamond', serif;
-             font-size: 0.95rem; color: #999; letter-spacing: 1px;">
-             Colored area zones &mdash; click any territory for details</div>
-    </div>
-    """, unsafe_allow_html=True)
+    # --- Advanced Territory Analysis ---
+    st.markdown("#### Territory Analysis")
+    st.caption("Toggle layers using the checkboxes on the map. "
+               "Click any territory for detailed stats.")
 
-    # Area selector for center focus
-    tv_col1, tv_col2 = st.columns([1, 2])
-    with tv_col1:
+    # Controls row
+    tv_c1, tv_c2, tv_c3 = st.columns([1, 1, 1])
+    with tv_c1:
         focus_area = st.selectbox(
             "Center on area:",
             options=sorted(df_filtered["area"].unique()),
             index=0,
             key="territory_focus_area",
         )
-    with tv_col2:
+    with tv_c2:
         territory_radius = st.slider(
             "Nearby radius (km):",
             min_value=1, max_value=10, value=3,
             key="territory_radius",
         )
+    with tv_c3:
+        color_mode = st.selectbox(
+            "Color territories by:",
+            options=["Area (unique colors)", "Strength", "Member Density"],
+            index=0,
+            key="territory_color_mode",
+        )
+
+    color_by_map = {
+        "Area (unique colors)": "area",
+        "Strength": "strength",
+        "Member Density": "density",
+    }
+    color_by = color_by_map[color_mode]
 
     territory_summary = get_area_summary(df_filtered)
 
     try:
-        t_map = build_territory_map(
+        t_map = build_advanced_territory_map(
             df_filtered, territory_summary,
             center_area=focus_area,
             radius=territory_radius * 0.01,
+            color_by=color_by,
         )
         st_folium(t_map, use_container_width=True, height=920,
                   key="territory_map")
     except Exception as e:
         st.error(f"Could not render territory map: {e}")
+
+    # Export section
+    st.markdown("---")
+    exp_c1, exp_c2, exp_c3 = st.columns(3)
+    with exp_c1:
+        kml_data = generate_territory_kml(
+            df_filtered, territory_summary
+        )
+        st.download_button(
+            label="Export KML (Google Earth)",
+            data=kml_data.encode("utf-8"),
+            file_name="lg_geoview_territories.kml",
+            mime="application/vnd.google-earth.kml+xml",
+        )
+    with exp_c2:
+        csv_export = territory_summary.to_csv(index=False)
+        st.download_button(
+            label="Export Territory Data (CSV)",
+            data=csv_export.encode("utf-8"),
+            file_name=f"territory_data_{pd.Timestamp.now().strftime('%Y-%m-%d')}.csv",
+            mime="text/csv",
+        )
+    with exp_c3:
+        from src.data_loader import AREA_COORDINATES
+        nearby_set = set()
+        ck = focus_area.lower().strip()
+        cc = AREA_COORDINATES.get(ck, [17.4948, 78.3996])
+        for an, ac in AREA_COORDINATES.items():
+            dist = ((ac[0] - cc[0])**2 + (ac[1] - cc[1])**2)**0.5
+            if dist <= territory_radius * 0.01:
+                nearby_set.add(an)
+        occ = set(df_filtered["area"].str.lower().str.strip().unique())
+        gaps = [n.title() for n in nearby_set if n not in occ]
+        if gaps:
+            st.info(f"**{len(gaps)} expansion zones:** {', '.join(sorted(gaps))}")
+        else:
+            st.success("All nearby territories occupied!")
 
 # --- Drill-Down Section (pushed to next scroll view) ---
 st.markdown("<div style='margin-top: 60px;'></div>", unsafe_allow_html=True)

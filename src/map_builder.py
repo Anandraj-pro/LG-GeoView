@@ -893,3 +893,399 @@ def _add_territory_legend(m, area_color_map, area_names,
     </div>
     """
     m.get_root().html.add_child(folium.Element(legend_html))
+
+
+# --- Strength-based coloring for density view ---
+STRENGTH_TERRITORY = {
+    "Strong": {"fill": "#2E7D32", "border": "#1B5E20"},
+    "Medium": {"fill": "#F9A825", "border": "#F57F17"},
+    "Weak":   {"fill": "#C62828", "border": "#B71C1C"},
+}
+
+
+def build_advanced_territory_map(
+    df, summary_df,
+    center_area="Kukatpally",
+    radius=KUKATPALLY_RADIUS,
+    color_by="area",
+):
+    """Build advanced territory map with multiple toggleable layers.
+
+    Layers: Territory Boundaries, Group Markers, Gap Analysis,
+    Strength Indicators, and Member Density Stats.
+    """
+    t0 = time.perf_counter()
+    logger.info("Building advanced territory map, color_by=%s", color_by)
+
+    from src.data_loader import AREA_COORDINATES
+
+    center_key = center_area.lower().strip()
+    center_coords = AREA_COORDINATES.get(center_key, KUKATPALLY_CENTER)
+
+    nearby = {}
+    for area_name, coords in AREA_COORDINATES.items():
+        dist = ((coords[0] - center_coords[0]) ** 2 +
+                (coords[1] - center_coords[1]) ** 2) ** 0.5
+        if dist <= radius:
+            nearby[area_name] = coords
+
+    m = folium.Map(
+        location=center_coords, zoom_start=14,
+        tiles="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+        attr="Google Maps",
+    )
+
+    if not nearby:
+        return m
+
+    lats = [c[0] for c in nearby.values()]
+    lngs = [c[1] for c in nearby.values()]
+    pad = 0.008
+    bbox = (min(lats) - pad, max(lats) + pad,
+            min(lngs) - pad, max(lngs) + pad)
+
+    area_names = list(nearby.keys())
+    centers = [nearby[a] for a in area_names]
+    occupied = set(df["area"].str.lower().str.strip().unique())
+
+    slookup = {}
+    for _, srow in summary_df.iterrows():
+        slookup[srow["area"].lower().strip()] = srow
+
+    # Color assignment based on mode
+    area_color_map = {}
+    cidx = 0
+    for name in area_names:
+        srow = slookup.get(name)
+        if name not in occupied:
+            area_color_map[name] = UNOCCUPIED_COLOR
+            continue
+        if color_by == "strength" and srow is not None:
+            st = srow.get("strength", "Weak")
+            area_color_map[name] = STRENGTH_TERRITORY.get(
+                st, STRENGTH_TERRITORY["Weak"])
+        elif color_by == "density" and srow is not None:
+            mem = int(srow["total_members"])
+            if mem >= 50:
+                area_color_map[name] = {
+                    "fill": "#1B5E20", "border": "#2E7D32"}
+            elif mem >= 30:
+                area_color_map[name] = {
+                    "fill": "#4CAF50", "border": "#388E3C"}
+            elif mem >= 15:
+                area_color_map[name] = {
+                    "fill": "#FFC107", "border": "#F9A825"}
+            else:
+                area_color_map[name] = {
+                    "fill": "#FF5722", "border": "#D84315"}
+        else:
+            area_color_map[name] = TERRITORY_PALETTE[
+                cidx % len(TERRITORY_PALETTE)]
+            cidx += 1
+
+    boundaries = _compute_voronoi_boundaries(centers, bbox)
+
+    # --- Layer 1: Territory Boundaries ---
+    t_layer = folium.FeatureGroup(
+        name="Territory Boundaries", show=True)
+    for idx, bnd in boundaries.items():
+        if len(bnd) < 3:
+            continue
+        name = area_names[idx]
+        colors = area_color_map[name]
+        is_occ = name in occupied
+        display = name.title()
+        srow = slookup.get(name)
+
+        if srow is not None:
+            grp = int(srow["total_groups"])
+            mem = int(srow["total_members"])
+            stren = srow.get("strength", "")
+            avg = mem / grp if grp > 0 else 0
+            popup_t = (
+                f'<div style="font-family:Arial;padding:10px;'
+                f'min-width:180px;">'
+                f'<b style="font-size:15px;color:'
+                f'{colors["border"]};">{display}</b>'
+                f'<hr style="margin:6px 0;">'
+                f'<table style="font-size:12px;width:100%;">'
+                f'<tr><td>Groups:</td>'
+                f'<td align="right"><b>{grp}</b></td></tr>'
+                f'<tr><td>Members:</td>'
+                f'<td align="right"><b>{mem}</b></td></tr>'
+                f'<tr><td>Avg/Group:</td>'
+                f'<td align="right"><b>{avg:.1f}</b></td></tr>'
+                f'<tr><td>Strength:</td>'
+                f'<td align="right"><b>{stren}</b></td></tr>'
+                f'</table></div>')
+        else:
+            popup_t = (
+                f'<div style="font-family:Arial;padding:10px;">'
+                f'<b style="font-size:15px;">{display}</b><br>'
+                f'<span style="color:#e74c3c;font-weight:bold;">'
+                f'No groups \u2014 expansion opportunity</span>'
+                f'</div>')
+
+        folium.Polygon(
+            locations=bnd, color=colors["border"],
+            fill=True, fill_color=colors["fill"],
+            fill_opacity=0.35 if is_occ else 0.10, weight=3,
+            popup=folium.Popup(popup_t, max_width=250),
+            tooltip=display,
+        ).add_to(t_layer)
+
+        folium.Marker(
+            location=[nearby[name][0], nearby[name][1]],
+            icon=folium.DivIcon(html=(
+                f'<div style="font-family:Arial;font-size:12px;'
+                f'font-weight:bold;color:{colors["border"]};'
+                f'text-shadow:1px 1px 2px white,-1px -1px 2px white,'
+                f'1px -1px 2px white,-1px 1px 2px white;'
+                f'text-align:center;pointer-events:none;">'
+                f'{display}</div>'),
+                icon_size=(160, 18), icon_anchor=(80, 9)),
+        ).add_to(t_layer)
+    t_layer.add_to(m)
+
+    # --- Layer 2: Group Markers ---
+    m_layer = folium.FeatureGroup(
+        name="Group Markers", show=True)
+    nearby_df = df[
+        df["area"].str.lower().str.strip().isin(set(area_names))]
+    for _, row in nearby_df.iterrows():
+        mem = int(row["members"])
+        akey = row["area"].lower().strip()
+        colors = area_color_map.get(akey, TERRITORY_PALETTE[0])
+        popup_html = (
+            f'<div style="font-family:Arial;padding:8px;'
+            f'min-width:150px;">'
+            f'<b style="color:{colors["border"]};">'
+            f'{row["leader_name"]}</b>'
+            f' ({row["area"]})<hr style="margin:4px 0;">'
+            f'<div style="font-size:12px;">'
+            f'Families: {int(row.get("families", 0))}<br>'
+            f'Individuals: {int(row.get("individuals", 0))}<br>'
+            f'Total: <b>{mem}</b><br>'
+            f'Meeting: {row.get("meeting_day", "")}<br>'
+            f'Strength: {row.get("strength", "")}</div></div>')
+        folium.CircleMarker(
+            location=[row["latitude"], row["longitude"]],
+            radius=max(6, mem * 0.4),
+            color=colors["border"], fill=True,
+            fill_color=colors["fill"], fill_opacity=0.9, weight=2,
+            popup=folium.Popup(popup_html, max_width=200),
+            tooltip=f"{row['leader_name']} \u2014 {mem} members",
+        ).add_to(m_layer)
+    m_layer.add_to(m)
+
+    # --- Layer 3: Gap Analysis ---
+    g_layer = folium.FeatureGroup(
+        name="Gap Analysis (Expansion)", show=False)
+    for name in area_names:
+        if name in occupied:
+            continue
+        coords = nearby[name]
+        display = name.title()
+        folium.CircleMarker(
+            location=coords, radius=20, color="#e74c3c",
+            fill=True, fill_color="#e74c3c",
+            fill_opacity=0.15, weight=2, dash_array="5 5",
+        ).add_to(g_layer)
+        folium.CircleMarker(
+            location=coords, radius=8, color="#e74c3c",
+            fill=True, fill_color="#e74c3c",
+            fill_opacity=0.4, weight=0,
+        ).add_to(g_layer)
+        folium.Marker(
+            location=[coords[0] - 0.002, coords[1]],
+            icon=folium.DivIcon(html=(
+                f'<div style="font-family:Arial;font-size:10px;'
+                f'color:#c0392b;font-weight:bold;'
+                f'text-shadow:1px 1px 2px white,-1px -1px 2px white;'
+                f'text-align:center;pointer-events:none;">'
+                f'{display}<br>'
+                f'<span style="font-size:9px;color:#e74c3c;">'
+                f'NO COVERAGE</span></div>'),
+                icon_size=(140, 28), icon_anchor=(70, 14)),
+        ).add_to(g_layer)
+    g_layer.add_to(m)
+
+    # --- Layer 4: Strength Indicators ---
+    s_layer = folium.FeatureGroup(
+        name="Strength Indicators", show=False)
+    for _, row in nearby_df.iterrows():
+        st = row.get("strength", "Weak")
+        mem = int(row["members"])
+        sc = STRENGTH_TERRITORY.get(st, STRENGTH_TERRITORY["Weak"])
+        sym = {"Strong": "+", "Medium": "~", "Weak": "-"}.get(
+            st, "?")
+        folium.CircleMarker(
+            location=[row["latitude"], row["longitude"]],
+            radius=max(10, mem * 0.5),
+            color=sc["border"], fill=True,
+            fill_color=sc["fill"], fill_opacity=0.3, weight=2,
+        ).add_to(s_layer)
+        folium.Marker(
+            location=[row["latitude"], row["longitude"]],
+            icon=folium.DivIcon(html=(
+                f'<div style="font-family:Arial;font-size:11px;'
+                f'font-weight:bold;color:{sc["border"]};'
+                f'text-shadow:1px 1px 1px white;'
+                f'text-align:center;pointer-events:none;">'
+                f'{sym}{mem}</div>'),
+                icon_size=(40, 16), icon_anchor=(20, 8)),
+        ).add_to(s_layer)
+    s_layer.add_to(m)
+
+    # --- Layer 5: Member Density Stats ---
+    d_layer = folium.FeatureGroup(
+        name="Member Density Stats", show=False)
+    for name in area_names:
+        srow = slookup.get(name)
+        if srow is None:
+            continue
+        coords = nearby[name]
+        mem = int(srow["total_members"])
+        grp = int(srow["total_groups"])
+        avg = mem / grp if grp > 0 else 0
+        folium.Marker(
+            location=[coords[0] - 0.001, coords[1]],
+            icon=folium.DivIcon(html=(
+                f'<div style="font-family:Arial;background:white;'
+                f'border:1px solid #ddd;border-radius:6px;'
+                f'padding:6px 8px;box-shadow:0 1px 4px '
+                f'rgba(0,0,0,0.2);text-align:center;'
+                f'pointer-events:none;">'
+                f'<div style="font-size:11px;font-weight:bold;'
+                f'color:#333;">{name.title()}</div>'
+                f'<div style="font-size:18px;font-weight:bold;'
+                f'color:#2E7D32;">{mem}</div>'
+                f'<div style="font-size:9px;color:#888;">'
+                f'{grp} groups &middot; avg {avg:.0f}</div>'
+                f'</div>'),
+                icon_size=(130, 60), icon_anchor=(65, 30)),
+        ).add_to(d_layer)
+    d_layer.add_to(m)
+
+    # Layer control toggle (top-right checkbox panel)
+    folium.LayerControl(collapsed=False).add_to(m)
+
+    # Color mode legend (bottom-left)
+    _add_advanced_legend(m, color_by, area_names, occupied, center_area)
+
+    elapsed = time.perf_counter() - t0
+    logger.info("Advanced territory map built in %.3fs", elapsed)
+    return m
+
+
+def _add_advanced_legend(m, color_by, area_names, occupied, center_area):
+    """Legend for advanced territory map."""
+    occ = sum(1 for n in area_names if n in occupied)
+    total = len(area_names)
+    gap = total - occ
+
+    if color_by == "strength":
+        mode_items = (
+            '<div style="margin-bottom:4px;">'
+            '<span style="display:inline-block;width:12px;height:12px;'
+            'background:#2E7D32;border-radius:2px;"></span>'
+            ' <span style="font-size:11px;">Strong (30+)</span></div>'
+            '<div style="margin-bottom:4px;">'
+            '<span style="display:inline-block;width:12px;height:12px;'
+            'background:#F9A825;border-radius:2px;"></span>'
+            ' <span style="font-size:11px;">Medium (20-29)</span></div>'
+            '<div style="margin-bottom:4px;">'
+            '<span style="display:inline-block;width:12px;height:12px;'
+            'background:#C62828;border-radius:2px;"></span>'
+            ' <span style="font-size:11px;">Weak (&lt;20)</span></div>'
+        )
+    elif color_by == "density":
+        mode_items = (
+            '<div style="margin-bottom:4px;">'
+            '<span style="display:inline-block;width:12px;height:12px;'
+            'background:#1B5E20;border-radius:2px;"></span>'
+            ' <span style="font-size:11px;">High (50+)</span></div>'
+            '<div style="margin-bottom:4px;">'
+            '<span style="display:inline-block;width:12px;height:12px;'
+            'background:#4CAF50;border-radius:2px;"></span>'
+            ' <span style="font-size:11px;">Good (30-49)</span></div>'
+            '<div style="margin-bottom:4px;">'
+            '<span style="display:inline-block;width:12px;height:12px;'
+            'background:#FFC107;border-radius:2px;"></span>'
+            ' <span style="font-size:11px;">Low (15-29)</span></div>'
+            '<div style="margin-bottom:4px;">'
+            '<span style="display:inline-block;width:12px;height:12px;'
+            'background:#FF5722;border-radius:2px;"></span>'
+            ' <span style="font-size:11px;">Critical (&lt;15)'
+            '</span></div>'
+        )
+    else:
+        mode_items = (
+            '<div style="font-size:11px;color:#888;'
+            'margin-bottom:4px;">Each area = unique color</div>'
+        )
+
+    legend_html = f"""
+    <div style="
+        position:fixed;bottom:20px;left:10px;z-index:1000;
+        background:white;color:#333;padding:12px 14px;
+        border-radius:8px;border:1px solid #ddd;
+        box-shadow:0 2px 10px rgba(0,0,0,0.15);
+        font-family:Arial,sans-serif;font-size:12px;
+        min-width:160px;max-width:200px;">
+        <div style="font-size:13px;font-weight:bold;
+             margin-bottom:8px;border-bottom:1px solid #eee;
+             padding-bottom:6px;">{center_area.title()} Region</div>
+        {mode_items}
+        <div style="margin-top:6px;padding-top:6px;
+             border-top:1px solid #eee;">
+            <div style="margin-bottom:2px;">
+                <span style="display:inline-block;width:12px;
+                      height:12px;background:#9E9E9E;
+                      border-radius:2px;"></span>
+                <span style="font-size:11px;">
+                    Unoccupied ({gap})</span></div></div>
+        <div style="font-size:10px;color:#888;margin-top:6px;
+             text-align:center;">
+            {occ}/{total} territories occupied</div>
+    </div>
+    """
+    m.get_root().html.add_child(folium.Element(legend_html))
+
+
+def generate_territory_kml(df, summary_df):
+    """Generate KML string for territory data export."""
+    lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<kml xmlns="http://www.opengis.net/kml/2.2">',
+        '<Document>',
+        '<name>LG GeoView Territories</name>',
+    ]
+    for _, row in summary_df.iterrows():
+        area = row["area"]
+        mem = int(row["total_members"])
+        grp = int(row["total_groups"])
+        st = row.get("strength", "")
+        lines.append('<Placemark>')
+        lines.append(f'<name>{area}</name>')
+        lines.append(
+            f'<description>{grp} groups, {mem} members,'
+            f' {st}</description>')
+        lines.append(
+            f'<Point><coordinates>{row["longitude"]},'
+            f'{row["latitude"]},0</coordinates></Point>')
+        lines.append('</Placemark>')
+    for _, row in df.iterrows():
+        lines.append('<Placemark>')
+        lines.append(
+            f'<name>{row["leader_name"]} - {row["area"]}</name>')
+        lines.append(
+            f'<description>{int(row["members"])}'
+            f' members</description>')
+        lines.append(
+            f'<Point><coordinates>{row["longitude"]},'
+            f'{row["latitude"]},0</coordinates></Point>')
+        lines.append('</Placemark>')
+    lines.append('</Document>')
+    lines.append('</kml>')
+    return '\n'.join(lines)
