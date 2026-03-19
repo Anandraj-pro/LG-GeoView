@@ -30,42 +30,97 @@ st.set_page_config(
 # --- Custom Styling ---
 st.markdown("""
 <style>
-    /* --- Light Mode Styles --- */
-    .metric-card {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        padding: 20px;
-        border-radius: 10px;
-        text-align: center;
-        border: 1px solid #dee2e6;
-    }
-    .metric-value {
-        font-size: 2.2rem;
-        font-weight: bold;
-        color: #00b894;
-    }
-    .metric-label {
-        font-size: 0.9rem;
-        color: #6c757d;
-        margin-top: 5px;
-    }
-    .stApp > header { background-color: transparent; }
-
-    /* Divider lines */
-    hr {
-        border-color: #dee2e6 !important;
-    }
-
-    /* --- King's Kingdom View Styles --- */
+    /* --- Kingdom Theme — Warm Parchment + Gold --- */
     @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap');
 
+    .stApp {
+        background: #FFFBF0 !important;
+    }
+    .stApp > header { background-color: transparent; }
+
+    /* Sidebar */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #FAF5E8 0%, #F5EDD8 100%) !important;
+        border-right: 2px solid #D4AF3733 !important;
+    }
+    [data-testid="stSidebar"] h1,
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3 {
+        font-family: 'Cinzel', serif !important;
+        color: #5D4E37 !important;
+    }
+
+    /* Main headings */
+    h1, h2, h3 {
+        font-family: 'Cinzel', serif !important;
+        color: #5D4E37 !important;
+        letter-spacing: 1px;
+    }
+    p, span, label, .stMarkdown {
+        font-family: 'Cormorant Garamond', 'Palatino Linotype', serif !important;
+    }
+
+    /* KPI Metric Cards — parchment + gold */
+    .metric-card {
+        background: linear-gradient(135deg, #FFFBF0 0%, #F5EDD8 100%);
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        border: 1px solid #D4AF3744;
+        box-shadow: 0 2px 8px rgba(139,105,20,0.08);
+    }
+    .metric-value {
+        font-family: 'Cinzel', serif;
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #8B6914;
+    }
+    .metric-label {
+        font-family: 'Cormorant Garamond', serif;
+        font-size: 0.9rem;
+        color: #7A6B50;
+        margin-top: 5px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+    }
+
+    /* Divider lines */
+    hr {
+        border-color: #D4AF3733 !important;
+    }
+
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        font-family: 'Cinzel', serif !important;
+        letter-spacing: 1px;
+    }
+
+    /* Tables */
+    [data-testid="stDataFrame"] {
+        border: 1px solid #D4AF3722 !important;
+        border-radius: 8px;
+    }
+
+    /* Buttons */
+    .stDownloadButton button {
+        background: linear-gradient(135deg, #D4AF37 0%, #B8960C 100%) !important;
+        color: white !important;
+        border: none !important;
+        font-family: 'Cinzel', serif !important;
+        letter-spacing: 1px;
+    }
+
+    /* --- King's Kingdom View Styles --- */
     .kingdom-header {
-        background: linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        background: linear-gradient(145deg, #FAF5E8 0%, #F0E6CC 50%, #E8DCBE 100%);
         padding: 28px 32px;
         border-radius: 12px;
-        border: 1px solid rgba(212, 175, 55, 0.25);
-        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4),
-                    inset 0 1px 0 rgba(212, 175, 55, 0.1);
+        border: 1px solid #D4AF3744;
+        box-shadow: 0 2px 12px rgba(139, 105, 20, 0.1);
         text-align: center;
         margin-bottom: 20px;
         position: relative;
@@ -83,16 +138,15 @@ st.markdown("""
         font-family: 'Cinzel', 'Palatino Linotype', serif;
         font-size: 1.8rem;
         font-weight: 700;
-        color: #D4AF37;
+        color: #8B6914;
         letter-spacing: 4px;
         text-transform: uppercase;
-        text-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
         margin: 0;
     }
     .kingdom-subtitle {
         font-family: 'Cormorant Garamond', 'Palatino Linotype', serif;
         font-size: 1rem;
-        color: #BFA76A;
+        color: #7A6B50;
         letter-spacing: 2px;
         margin-top: 6px;
         font-style: italic;
@@ -105,12 +159,12 @@ st.markdown("""
     }
 
     .kingdom-metric {
-        background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
+        background: linear-gradient(145deg, #FFFBF0 0%, #F5EDD8 100%);
         padding: 18px 14px;
         border-radius: 10px;
         text-align: center;
-        border: 1px solid rgba(212, 175, 55, 0.2);
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+        border: 1px solid #D4AF3733;
+        box-shadow: 0 2px 8px rgba(139, 105, 20, 0.08);
         position: relative;
         overflow: hidden;
     }
@@ -129,13 +183,12 @@ st.markdown("""
         font-family: 'Cinzel', serif;
         font-size: 2rem;
         font-weight: 700;
-        color: #D4AF37;
-        text-shadow: 0 0 12px rgba(212, 175, 55, 0.2);
+        color: #8B6914;
     }
     .kingdom-metric-label {
         font-family: 'Cormorant Garamond', serif;
         font-size: 0.85rem;
-        color: #BFA76A;
+        color: #7A6B50;
         letter-spacing: 1.5px;
         text-transform: uppercase;
         margin-top: 4px;
@@ -144,7 +197,7 @@ st.markdown("""
     .kingdom-scripture {
         font-family: 'Cormorant Garamond', serif;
         font-size: 1.05rem;
-        color: #BFA76A;
+        color: #7A6B50;
         text-align: center;
         font-style: italic;
         padding: 16px 40px;
@@ -152,7 +205,7 @@ st.markdown("""
         border-left: 2px solid #D4AF3744;
         border-right: 2px solid #D4AF3744;
         background: linear-gradient(90deg,
-                    rgba(212,175,55,0.03), transparent, rgba(212,175,55,0.03));
+                    rgba(212,175,55,0.05), transparent, rgba(212,175,55,0.05));
     }
 
     /* --- Responsive Styles (Tablet / Small Screens) --- */
@@ -755,4 +808,10 @@ st.dataframe(
 
 # --- Footer ---
 st.markdown("---")
-st.caption("LG GeoView v1.1 | West Campus Care Group Distribution | Hyderabad")
+st.markdown("""
+<div style="text-align: center; font-family: 'Cinzel', serif;
+     color: #A0936E; font-size: 0.8rem; letter-spacing: 2px;
+     padding: 10px 0;">
+    LG GeoView v1.1 &nbsp;&middot;&nbsp; West Campus &nbsp;&middot;&nbsp; Hyderabad
+</div>
+""", unsafe_allow_html=True)

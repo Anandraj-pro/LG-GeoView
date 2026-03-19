@@ -372,12 +372,12 @@ def build_kingdom_map(df: pd.DataFrame, summary_df: pd.DataFrame,
 
     center, bounds = _compute_map_bounds()
 
-    # Dark tile layer for kingdom aesthetic
+    # Light muted tile — readable background with regal markers
     m = folium.Map(
         location=center,
         zoom_start=DEFAULT_ZOOM,
-        tiles="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-        attr="CartoDB Dark Matter",
+        tiles="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        attr="CartoDB Positron",
     )
 
     _apply_fixed_bounds(m, bounds)
@@ -420,12 +420,12 @@ def build_kingdom_map(df: pd.DataFrame, summary_df: pd.DataFrame,
         territory_html = f"""
         <div style="
             font-family: 'Cinzel', 'Palatino Linotype', 'Book Antiqua', serif;
-            color: {colors['border']};
+            color: #5D4E37;
             font-size: 13px;
             font-weight: 700;
             letter-spacing: 2px;
             text-transform: uppercase;
-            text-shadow: 0 0 8px rgba(0,0,0,0.9), 0 0 20px {colors['glow']};
+            text-shadow: 1px 1px 2px white, -1px -1px 2px white;
             text-align: center;
             white-space: nowrap;
             pointer-events: none;
@@ -444,14 +444,13 @@ def build_kingdom_map(df: pd.DataFrame, summary_df: pd.DataFrame,
         stats_html = f"""
         <div style="
             font-family: 'Cinzel', 'Palatino Linotype', serif;
-            color: #BFA76A;
+            color: #7A6B50;
             font-size: 10px;
             letter-spacing: 1px;
-            text-shadow: 0 0 6px rgba(0,0,0,0.9);
+            text-shadow: 1px 1px 1px white;
             text-align: center;
             white-space: nowrap;
             pointer-events: none;
-            opacity: 0.8;
         ">{total_groups} shepherds &middot; {total_members} souls</div>
         """
         folium.Marker(
@@ -484,35 +483,35 @@ def build_kingdom_map(df: pd.DataFrame, summary_df: pd.DataFrame,
         folium.CircleMarker(
             location=[row["latitude"], row["longitude"]],
             radius=3,
-            color="#FFFFFF",
+            color=colors["border"],
             fill=True,
-            fill_color="#FFD700",
+            fill_color=colors["fill"],
             fill_opacity=1.0,
-            weight=0,
+            weight=1,
         ).add_to(m)
 
         # Popup
         popup_html = f"""
         <div style="font-family: 'Palatino Linotype', 'Book Antiqua', serif;
-             min-width: 180px; background: #1a1a2e; color: #d4af37;
+             min-width: 180px; background: #FFFBF0; color: #5D4E37;
              padding: 12px 14px; border-radius: 8px;
-             border: 1px solid #d4af3744;">
-            <div style="font-size: 14px; font-weight: bold;
+             border: 1px solid #D4AF37; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+            <div style="font-size: 14px; font-weight: bold; color: #8B6914;
                  letter-spacing: 1px; margin-bottom: 6px;
-                 border-bottom: 1px solid #d4af3733; padding-bottom: 6px;">
+                 border-bottom: 1px solid #D4AF3744; padding-bottom: 6px;">
                 {row['area']}
             </div>
             <table style="font-size: 12px; border-collapse: collapse; width: 100%;">
-                <tr><td style="color: #BFA76A; padding: 2px 0;">Shepherd</td>
-                    <td style="color: #E8D5A3; text-align: right;">{row['leader_name']}</td></tr>
-                <tr><td style="color: #BFA76A; padding: 2px 0;">Families</td>
-                    <td style="color: #E8D5A3; text-align: right;">{int(row.get('families', 0))}</td></tr>
-                <tr><td style="color: #BFA76A; padding: 2px 0;">Individuals</td>
-                    <td style="color: #E8D5A3; text-align: right;">{int(row.get('individuals', 0))}</td></tr>
-                <tr><td style="color: #BFA76A; padding: 2px 0;">Total Souls</td>
-                    <td style="color: #FFD700; font-weight: bold; text-align: right;">{members}</td></tr>
-                <tr><td style="color: #BFA76A; padding: 2px 0;">Gathering</td>
-                    <td style="color: #E8D5A3; text-align: right;">{row.get('meeting_day', '')}</td></tr>
+                <tr><td style="color: #8B7355; padding: 2px 0;">Shepherd</td>
+                    <td style="color: #5D4E37; text-align: right;">{row['leader_name']}</td></tr>
+                <tr><td style="color: #8B7355; padding: 2px 0;">Families</td>
+                    <td style="color: #5D4E37; text-align: right;">{int(row.get('families', 0))}</td></tr>
+                <tr><td style="color: #8B7355; padding: 2px 0;">Individuals</td>
+                    <td style="color: #5D4E37; text-align: right;">{int(row.get('individuals', 0))}</td></tr>
+                <tr><td style="color: #8B7355; padding: 2px 0;">Total Souls</td>
+                    <td style="color: #8B6914; font-weight: bold; text-align: right;">{members}</td></tr>
+                <tr><td style="color: #8B7355; padding: 2px 0;">Gathering</td>
+                    <td style="color: #5D4E37; text-align: right;">{row.get('meeting_day', '')}</td></tr>
             </table>
         </div>
         """
@@ -545,12 +544,12 @@ def _add_kingdom_legend(m: folium.Map, summary_df: pd.DataFrame):
         bottom: 20px;
         right: 10px;
         z-index: 1000;
-        background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
-        color: #d4af37;
+        background: #FFFBF0;
+        color: #5D4E37;
         padding: 16px 20px;
         border-radius: 10px;
-        border: 1px solid #d4af3744;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(212,175,55,0.1);
+        border: 1px solid #D4AF37;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.15);
         font-family: 'Palatino Linotype', 'Book Antiqua', 'Cinzel', serif;
         font-size: 12px;
         min-width: 200px;
@@ -558,32 +557,32 @@ def _add_kingdom_legend(m: folium.Map, summary_df: pd.DataFrame):
     ">
         <div style="font-size: 14px; font-weight: bold; letter-spacing: 2px;
              text-transform: uppercase; margin-bottom: 10px;
-             border-bottom: 1px solid #d4af3733; padding-bottom: 8px;
-             text-align: center;">
+             border-bottom: 1px solid #D4AF3744; padding-bottom: 8px;
+             text-align: center; color: #8B6914;">
             &#9768; King's Kingdom
         </div>
         <div style="margin-bottom: 8px;">
-            <span style="color: #FFD700;">&#9679;</span>
-            <span style="color: #BFA76A; font-size: 11px;">
+            <span style="color: #D4AF37;">&#9679;</span>
+            <span style="color: #5D4E37; font-size: 11px;">
                 Strong (30+ souls)</span>
         </div>
         <div style="margin-bottom: 8px;">
-            <span style="color: #DAA520;">&#9679;</span>
-            <span style="color: #BFA76A; font-size: 11px;">
+            <span style="color: #C0A060;">&#9679;</span>
+            <span style="color: #5D4E37; font-size: 11px;">
                 Growing (20-29 souls)</span>
         </div>
         <div style="margin-bottom: 12px;">
-            <span style="color: #8B6914;">&#9679;</span>
-            <span style="color: #BFA76A; font-size: 11px;">
+            <span style="color: #A0822A;">&#9679;</span>
+            <span style="color: #5D4E37; font-size: 11px;">
                 Emerging (&lt;20 souls)</span>
         </div>
-        <div style="border-top: 1px solid #d4af3733; padding-top: 8px;
-             font-size: 11px; color: #BFA76A; line-height: 1.6;">
+        <div style="border-top: 1px solid #D4AF3744; padding-top: 8px;
+             font-size: 11px; color: #7A6B50; line-height: 1.6;">
             {total_areas} Territories &middot;
             {total_groups} Shepherds<br>
             {total_members} Souls Gathered
         </div>
-        <div style="font-size: 9px; color: #8B7340; margin-top: 6px;
+        <div style="font-size: 9px; color: #A0936E; margin-top: 6px;
              text-align: center; letter-spacing: 1px;">
             DASHED CIRCLE = TERRITORY REACH
         </div>
