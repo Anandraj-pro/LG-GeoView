@@ -4,6 +4,10 @@ import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 
+from src.logger import get_logger
+
+logger = get_logger(__name__)
+
 
 STRENGTH_COLORS = {
     "Strong": "#00b894",
@@ -33,6 +37,7 @@ LIGHT_LAYOUT = dict(
 
 def members_by_area_chart(df: pd.DataFrame) -> go.Figure:
     """Stacked bar chart: families + individuals by area."""
+    logger.debug("Generating members_by_area_chart")
     area_data = df.groupby("area").agg(
         families=("families", "sum"),
         individuals=("individuals", "sum"),
@@ -64,6 +69,7 @@ def members_by_area_chart(df: pd.DataFrame) -> go.Figure:
 
 def groups_by_area_chart(df: pd.DataFrame) -> go.Figure:
     """Bar chart: care group count by area."""
+    logger.debug("Generating groups_by_area_chart")
     area_data = df.groupby("area")["lg_group"].count().sort_values(ascending=True).reset_index()
     area_data.columns = ["area", "groups"]
 
@@ -88,6 +94,7 @@ def groups_by_area_chart(df: pd.DataFrame) -> go.Figure:
 
 def strength_pie_chart(df: pd.DataFrame) -> go.Figure:
     """Pie chart: Strong / Medium / Weak distribution."""
+    logger.debug("Generating strength_pie_chart")
     strength_counts = df["strength"].value_counts().reset_index()
     strength_counts.columns = ["strength", "count"]
 
@@ -115,6 +122,7 @@ def strength_pie_chart(df: pd.DataFrame) -> go.Figure:
 
 def meeting_day_chart(df: pd.DataFrame) -> go.Figure:
     """Donut chart: distribution of meeting days across care groups."""
+    logger.debug("Generating meeting_day_chart")
     day_counts = df[df["meeting_day"].str.strip() != ""].groupby("meeting_day").size().reset_index()
     day_counts.columns = ["day", "count"]
     day_counts = day_counts.sort_values("count", ascending=False)
@@ -144,6 +152,7 @@ def meeting_day_chart(df: pd.DataFrame) -> go.Figure:
 
 def top_bottom_groups_chart(df: pd.DataFrame) -> go.Figure:
     """Horizontal bar showing top 5 and bottom 5 care groups by members."""
+    logger.debug("Generating top_bottom_groups_chart")
     sorted_df = df.sort_values("members", ascending=False)
     top5 = sorted_df.head(5)
     bottom5 = sorted_df.tail(5)
@@ -172,6 +181,7 @@ def top_bottom_groups_chart(df: pd.DataFrame) -> go.Figure:
 
 def leader_members_chart(df: pd.DataFrame) -> go.Figure:
     """Bar chart: total members managed by each leader."""
+    logger.debug("Generating leader_members_chart")
     leader_data = df.groupby("leader_name").agg(
         members=("members", "sum"),
         groups=("lg_group", "count"),
@@ -198,6 +208,7 @@ def leader_members_chart(df: pd.DataFrame) -> go.Figure:
 
 def area_detail_table(df: pd.DataFrame, area: str) -> pd.DataFrame:
     """Return filtered dataframe for drill-down display."""
+    logger.debug("Generating area_detail_table for area=%s", area)
     area_df = df[df["area"] == area][[
         "lg_group", "leader_name", "families", "individuals", "members", "meeting_day", "strength"
     ]].copy()

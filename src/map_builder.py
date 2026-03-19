@@ -1,8 +1,13 @@
 """Map visualization module using Folium (Google Maps-style background)."""
 
+import time
+
 import folium
-from folium.plugins import MarkerCluster
 import pandas as pd
+
+from src.logger import get_logger
+
+logger = get_logger(__name__)
 
 # Hyderabad West center
 HYDERABAD_CENTER = [17.470, 78.410]
@@ -42,8 +47,11 @@ MAP_STYLES = {
 
 def build_map(df: pd.DataFrame, map_style: str = None) -> folium.Map:
     """Build a Folium map with Google Maps background and colored markers."""
+    t0 = time.perf_counter()
     style_key = map_style or "Google Maps"
     style = MAP_STYLES.get(style_key, MAP_STYLES["Google Maps"])
+
+    logger.info("Building overview map with %d markers, style=%s", len(df), style_key)
 
     # Create base map
     if style["tiles"] == "OpenStreetMap":
@@ -81,7 +89,8 @@ def build_map(df: pd.DataFrame, map_style: str = None) -> folium.Map:
 
         # Popup with detailed info
         popup_html = f"""
-        <div style="font-family: Arial, sans-serif; min-width: 200px; background: white; color: #333; padding: 10px; border-radius: 6px;">
+        <div style="font-family: Arial, sans-serif; min-width: 200px;
+             background: white; color: #333; padding: 10px; border-radius: 6px;">
             <h4 style="margin: 0 0 8px 0; color: #2c3e50;">{row['area']}</h4>
             <table style="font-size: 13px; border-collapse: collapse; color: #333;">
                 <tr><td style="padding: 3px 8px 3px 0; color: #7f8c8d;"><b>Leader</b></td>
@@ -137,13 +146,18 @@ def build_map(df: pd.DataFrame, map_style: str = None) -> folium.Map:
     # Add legend with group colors
     _add_legend(m, group_color_map, df)
 
+    elapsed = time.perf_counter() - t0
+    logger.info("Overview map built: %d markers in %.3fs", len(df), elapsed)
     return m
 
 
 def build_detailed_map(df: pd.DataFrame, map_style: str = None) -> folium.Map:
     """Build a detailed map with always-visible labels — no hover needed."""
+    t0 = time.perf_counter()
     style_key = map_style or "Google Maps"
     style = MAP_STYLES.get(style_key, MAP_STYLES["Google Maps"])
+
+    logger.info("Building detailed map with %d markers", len(df))
 
     if style["tiles"] == "OpenStreetMap":
         m = folium.Map(
@@ -224,7 +238,8 @@ def build_detailed_map(df: pd.DataFrame, map_style: str = None) -> folium.Map:
             margin-left: {offset['margin_left']};
             margin-top: {offset['margin_top']};
         ">
-            <div style="font-size: 11px; font-weight: bold; color: #222; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis;">
+            <div style="font-size: 11px; font-weight: bold; color: #222;
+                 margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis;">
                 {row['leader_name']}
             </div>
             <div style="font-size: 10px; color: #666; margin-bottom: 2px;">
@@ -250,6 +265,8 @@ def build_detailed_map(df: pd.DataFrame, map_style: str = None) -> folium.Map:
             ),
         ).add_to(m)
 
+    elapsed = time.perf_counter() - t0
+    logger.info("Detailed map built: %d markers in %.3fs", len(df), elapsed)
     return m
 
 
@@ -265,7 +282,10 @@ def _add_legend(m: folium.Map, group_color_map: dict, df: pd.DataFrame):
         seen.add(group_key)
         color = group_color_map[group_key]
         label = f"{row['leader_name']} — {row['area']}"
-        legend_items += f'<span style="color: {color}; font-size: 16px;">&#9679;</span> <span style="color: #333; font-size: 11px;">{label}</span><br>\n'
+        legend_items += (
+            f'<span style="color: {color}; font-size: 16px;">&#9679;</span> '
+            f'<span style="color: #333; font-size: 11px;">{label}</span><br>\n'
+        )
 
     legend_html = f"""
     <div style="
