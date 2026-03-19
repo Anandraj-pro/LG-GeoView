@@ -1,12 +1,20 @@
 """LG GeoView — Care Group Distribution Dashboard for Hyderabad West."""
 
+import io
 import streamlit as st
 import pandas as pd
 from streamlit_folium import st_folium
-from src.data_loader import load_from_excel, load_from_csv, load_from_upload, load_from_google_sheets, assign_strength, get_area_summary
+from src.data_loader import (
+    load_from_excel, load_from_csv, load_from_upload,
+    load_from_google_sheets, assign_strength, get_area_summary,
+    validate_data_quality,
+)
 from src.map_builder import build_map, build_detailed_map, MAP_STYLES
-from src.charts import (members_by_area_chart, groups_by_area_chart, strength_pie_chart,
-                        area_detail_table, meeting_day_chart, top_bottom_groups_chart, leader_members_chart)
+from src.charts import (  # noqa: F401
+    members_by_area_chart, groups_by_area_chart, strength_pie_chart,
+    area_detail_table, meeting_day_chart, top_bottom_groups_chart,
+    leader_members_chart,
+)
 
 # --- Page Config ---
 st.set_page_config(
@@ -42,6 +50,31 @@ st.markdown("""
     /* Divider lines */
     hr {
         border-color: #dee2e6 !important;
+    }
+
+    /* --- Responsive Styles (Tablet / Small Screens) --- */
+    @media screen and (max-width: 768px) {
+        .metric-card {
+            padding: 12px 8px;
+        }
+        .metric-value {
+            font-size: 1.5rem;
+        }
+        .metric-label {
+            font-size: 0.75rem;
+        }
+        /* Let Streamlit stack columns naturally on narrow screens */
+        [data-testid="column"] {
+            min-width: 120px !important;
+        }
+        /* Reduce chart heights for smaller viewports */
+        .js-plotly-plot, .plotly, .plot-container {
+            max-height: 300px;
+        }
+        /* Map iframe */
+        iframe {
+            height: 500px !important;
+        }
     }
 
     /* --- Print Styles (A4) --- */
@@ -168,10 +201,38 @@ with st.sidebar:
     else:
         df = load_data("CSV")
 
+    # Data quality check
+    if not df.empty:
+        df, quality_warnings = validate_data_quality(df)
+        row_count = len(df)
+        warn_count = len(quality_warnings)
+        if warn_count > 0:
+            with st.expander(f"Data Quality: {row_count} rows, {warn_count} warnings"):
+                for w in quality_warnings:
+                    st.warning(w)
+        else:
+            st.caption(f"Data Quality: {row_count} rows loaded, no warnings")
+
+    # Track last update time
+    if "last_updated" not in st.session_state:
+        st.session_state.last_updated = pd.Timestamp.now()
+
     # Refresh button
     if st.button("Refresh Data"):
         st.cache_data.clear()
+        st.session_state.last_updated = pd.Timestamp.now()
         st.rerun()
+
+    # Display last updated timestamp
+    if "last_updated" in st.session_state:
+        elapsed = pd.Timestamp.now() - st.session_state.last_updated
+        minutes = int(elapsed.total_seconds() / 60)
+        if minutes < 1:
+            st.caption("Last updated: just now")
+        elif minutes < 60:
+            st.caption(f"Last updated: {minutes} min ago")
+        else:
+            st.caption(f"Last updated: {st.session_state.last_updated.strftime('%I:%M %p')}")
 
     st.markdown("---")
 
@@ -271,8 +332,11 @@ map_tab1, map_tab2 = st.tabs(["Overview Map", "Detailed Map"])
 
 with map_tab1:
     st.caption("Hover or click markers for details")
-    folium_map = build_map(df_filtered, map_style=map_style_name)
-    st_folium(folium_map, use_container_width=True, height=920, key="overview_map")
+    try:
+        folium_map = build_map(df_filtered, map_style=map_style_name)
+        st_folium(folium_map, use_container_width=True, height=920, key="overview_map")
+    except Exception as e:
+        st.error(f"Could not render overview map: {e}")
 
 with map_tab2:
     st.caption("All group details visible — no hover needed. Best for printing & screenshots.")
@@ -293,8 +357,11 @@ with map_tab2:
     else:
         detail_df = df_filtered
 
-    detailed_map = build_detailed_map(detail_df, map_style=map_style_name)
-    st_folium(detailed_map, use_container_width=True, height=920, key="detailed_map")
+    try:
+        detailed_map = build_detailed_map(detail_df, map_style=map_style_name)
+        st_folium(detailed_map, use_container_width=True, height=920, key="detailed_map")
+    except Exception as e:
+        st.error(f"Could not render detailed map: {e}")
 
 # --- Drill-Down Section (pushed to next scroll view) ---
 st.markdown("<div style='margin-top: 60px;'></div>", unsafe_allow_html=True)
@@ -341,6 +408,28 @@ st.dataframe(
     hide_index=True,
 )
 
+# Download buttons for drill-down data
+dl_col1, dl_col2 = st.columns(2)
+with dl_col1:
+    csv_data = all_detail.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        label="Download Filtered Data (CSV)",
+        data=csv_data,
+        file_name=f"lg_geoview_filtered_{pd.Timestamp.now().strftime('%Y-%m-%d')}.csv",
+        mime="text/csv",
+    )
+with dl_col2:
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+        all_detail.to_excel(writer, sheet_name="Filtered Data", index=False)
+        get_area_summary(df_filtered).to_excel(writer, sheet_name="Area Summary", index=False)
+    st.download_button(
+        label="Download Report (Excel)",
+        data=buffer.getvalue(),
+        file_name=f"lg_geoview_report_{pd.Timestamp.now().strftime('%Y-%m-%d')}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
 # --- Charts ---
 st.markdown("---")
 st.subheader("Analytics & Insights")
@@ -348,22 +437,46 @@ st.subheader("Analytics & Insights")
 chart_col1, chart_col2 = st.columns(2)
 
 with chart_col1:
-    st.plotly_chart(members_by_area_chart(df_filtered), use_container_width=True)
+    try:
+        st.plotly_chart(members_by_area_chart(df_filtered), use_container_width=True)
+    except Exception:
+        st.warning("Members by area chart unavailable.")
 
 with chart_col2:
-    st.plotly_chart(groups_by_area_chart(df_filtered), use_container_width=True)
+    try:
+        st.plotly_chart(groups_by_area_chart(df_filtered), use_container_width=True)
+    except Exception:
+        st.warning("Groups by area chart unavailable.")
 
 # Row 2: Meeting Day + Top/Bottom Groups
 chart_col3, chart_col4 = st.columns(2)
 
 with chart_col3:
-    st.plotly_chart(meeting_day_chart(df_filtered), use_container_width=True)
+    try:
+        st.plotly_chart(meeting_day_chart(df_filtered), use_container_width=True)
+    except Exception:
+        st.warning("Meeting day chart unavailable.")
 
 with chart_col4:
-    st.plotly_chart(top_bottom_groups_chart(df_filtered), use_container_width=True)
+    try:
+        st.plotly_chart(top_bottom_groups_chart(df_filtered), use_container_width=True)
+    except Exception:
+        st.warning("Top/bottom groups chart unavailable.")
 
-# Row 3: Members per Leader (full width)
-st.plotly_chart(leader_members_chart(df_filtered), use_container_width=True)
+# Row 3: Strength Distribution + Members per Leader
+chart_col5, chart_col6 = st.columns(2)
+
+with chart_col5:
+    try:
+        st.plotly_chart(strength_pie_chart(df_filtered), use_container_width=True)
+    except Exception:
+        st.warning("Strength distribution chart unavailable.")
+
+with chart_col6:
+    try:
+        st.plotly_chart(leader_members_chart(df_filtered), use_container_width=True)
+    except Exception:
+        st.warning("Leader members chart unavailable.")
 
 # --- Area Summary Table ---
 st.markdown("---")
@@ -385,4 +498,4 @@ st.dataframe(
 
 # --- Footer ---
 st.markdown("---")
-st.caption("LG GeoView v1.0 | West Campus Care Group Distribution | Hyderabad")
+st.caption("LG GeoView v1.1 | West Campus Care Group Distribution | Hyderabad")
