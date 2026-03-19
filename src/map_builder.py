@@ -544,8 +544,7 @@ def _add_kingdom_legend(m: folium.Map, summary_df: pd.DataFrame):
     m.get_root().html.add_child(folium.Element(legend_html))
 
 
-# --- Kukatpally Territory Colors ---
-# Rich, saturated palette for area fills — each area gets a unique hue
+# --- Territory Fill Colors ---
 TERRITORY_PALETTE = [
     {"fill": "#1B5E20", "border": "#2E7D32"},    # deep green
     {"fill": "#0D47A1", "border": "#1565C0"},     # deep blue
@@ -567,28 +566,52 @@ TERRITORY_PALETTE = [
     {"fill": "#1B5E20", "border": "#388E3C"},     # jade
 ]
 
-# Kukatpally center
+UNOCCUPIED_COLOR = {"fill": "#333333", "border": "#555555"}
+
 KUKATPALLY_CENTER = [17.4948, 78.3996]
-KUKATPALLY_RADIUS = 0.03  # ~3km in degrees
+KUKATPALLY_RADIUS = 0.03
 
 
-def _generate_territory_polygon(lat, lng, radius=0.003, sides=6):
-    """Generate a hexagonal polygon around a point."""
-    import math
-    points = []
-    for i in range(sides):
-        angle = math.radians(60 * i - 30)
-        plat = lat + radius * math.cos(angle)
-        plng = lng + radius * 1.2 * math.sin(angle)
-        points.append([plat, plng])
-    points.append(points[0])
-    return points
+def _compute_voronoi_cells(centers, bbox):
+    """Compute Voronoi-like polygons using grid sampling (no scipy)."""
+    lat_min, lat_max, lng_min, lng_max = bbox
+    grid_size = 40
+    lat_step = (lat_max - lat_min) / grid_size
+    lng_step = (lng_max - lng_min) / grid_size
+
+    # Assign each grid cell to the nearest center
+    # Key: center_index -> list of (lat, lng) grid corners
+    cell_assignments = {i: [] for i in range(len(centers))}
+
+    for row in range(grid_size):
+        for col in range(grid_size):
+            cell_lat = lat_min + row * lat_step
+            cell_lng = lng_min + col * lng_step
+            mid_lat = cell_lat + lat_step / 2
+            mid_lng = cell_lng + lng_step / 2
+
+            # Find nearest center
+            min_dist = float("inf")
+            nearest = 0
+            for i, (clat, clng) in enumerate(centers):
+                d = ((mid_lat - clat) ** 2 +
+                     (mid_lng - clng) ** 2)
+                if d < min_dist:
+                    min_dist = d
+                    nearest = i
+
+            cell_assignments[nearest].append(
+                (cell_lat, cell_lng, lat_step, lng_step)
+            )
+
+    return cell_assignments
 
 
 def build_territory_map(df: pd.DataFrame, summary_df: pd.DataFrame,
                         center_area: str = "Kukatpally",
                         radius: float = KUKATPALLY_RADIUS) -> folium.Map:
-    """Build a territory fill map centered on a focal area with colored zones."""
+    """Build a full-fill territory map. Every cell on the map is colored
+    by its nearest area — occupied areas in color, empty zones gray."""
     t0 = time.perf_counter()
     logger.info("Building territory map centered on %s", center_area)
 
@@ -598,15 +621,15 @@ def build_territory_map(df: pd.DataFrame, summary_df: pd.DataFrame,
     center_key = center_area.lower().strip()
     center_coords = AREA_COORDINATES.get(center_key, KUKATPALLY_CENTER)
 
-    # Filter to nearby areas
-    nearby_areas = []
+    # Find nearby area coordinates
+    nearby = {}
     for area_name, coords in AREA_COORDINATES.items():
-        dist = ((coords[0] - center_coords[0])**2 +
-                (coords[1] - center_coords[1])**2)**0.5
+        dist = ((coords[0] - center_coords[0]) ** 2 +
+                (coords[1] - center_coords[1]) ** 2) ** 0.5
         if dist <= radius:
-            nearby_areas.append(area_name)
+            nearby[area_name] = coords
 
-    # Dark style for territory view
+    # Dark map
     m = folium.Map(
         location=center_coords,
         zoom_start=14,
@@ -614,207 +637,259 @@ def build_territory_map(df: pd.DataFrame, summary_df: pd.DataFrame,
         attr="CartoDB Dark Matter",
     )
 
-    if df.empty:
+    if not nearby:
         return m
 
-    # Filter data to nearby areas only
-    nearby_set = set(nearby_areas)
-    nearby_df = df[
-        df["area"].str.lower().str.strip().isin(nearby_set)
-    ].copy()
-    nearby_summary = summary_df[
-        summary_df["area"].str.lower().str.strip().isin(nearby_set)
-    ].copy()
+    # Bounding box with padding
+    lats = [c[0] for c in nearby.values()]
+    lngs = [c[1] for c in nearby.values()]
+    pad = 0.005
+    bbox = (min(lats) - pad, max(lats) + pad,
+            min(lngs) - pad, max(lngs) + pad)
 
-    if nearby_df.empty:
-        return m
+    # Build centers list and track which are occupied
+    area_names = list(nearby.keys())
+    centers = [nearby[a] for a in area_names]
 
-    # Assign colors to areas
-    unique_areas = sorted(nearby_summary["area"].unique())
+    # Which areas have data (occupied)?
+    occupied_areas = set(
+        df["area"].str.lower().str.strip().unique()
+    )
+
+    # Assign colors
     area_color_map = {}
-    for idx, area in enumerate(unique_areas):
-        area_color_map[area] = TERRITORY_PALETTE[
-            idx % len(TERRITORY_PALETTE)
-        ]
+    color_idx = 0
+    for name in area_names:
+        if name in occupied_areas:
+            area_color_map[name] = TERRITORY_PALETTE[
+                color_idx % len(TERRITORY_PALETTE)
+            ]
+            color_idx += 1
+        else:
+            area_color_map[name] = UNOCCUPIED_COLOR
 
-    # Draw territory polygons for each area
-    for _, area_row in nearby_summary.iterrows():
-        area_name = area_row["area"]
-        colors = area_color_map[area_name]
-        total_members = int(area_row["total_members"])
-        total_groups = int(area_row["total_groups"])
-        strength = area_row.get("strength", "Weak")
+    # Compute grid cells assigned to each area center
+    cell_assignments = _compute_voronoi_cells(centers, bbox)
 
-        poly_radius = max(0.002, min(0.005, total_members * 0.00012))
+    # Draw filled rectangles for each cell
+    for center_idx, cells in cell_assignments.items():
+        name = area_names[center_idx]
+        colors = area_color_map[name]
+        is_occupied = name in occupied_areas
+        opacity = 0.45 if is_occupied else 0.15
 
-        polygon_points = _generate_territory_polygon(
-            area_row["latitude"], area_row["longitude"],
-            radius=poly_radius, sides=6,
+        for (clat, clng, dlat, dlng) in cells:
+            bounds = [
+                [clat, clng],
+                [clat + dlat, clng],
+                [clat + dlat, clng + dlng],
+                [clat, clng + dlng],
+            ]
+            folium.Polygon(
+                locations=bounds,
+                color=colors["border"],
+                fill=True,
+                fill_color=colors["fill"],
+                fill_opacity=opacity,
+                weight=0.5,
+            ).add_to(m)
+
+    # Draw bold borders between different areas
+    grid_size = 40
+    lat_step = (bbox[1] - bbox[0]) / grid_size
+    lng_step = (bbox[3] - bbox[2]) / grid_size
+
+    # Build a 2D grid of assignments for border detection
+    grid = []
+    for row in range(grid_size):
+        grid_row = []
+        for col in range(grid_size):
+            mid_lat = bbox[0] + row * lat_step + lat_step / 2
+            mid_lng = bbox[2] + col * lng_step + lng_step / 2
+            min_dist = float("inf")
+            nearest = 0
+            for i, (clat, clng) in enumerate(centers):
+                d = ((mid_lat - clat) ** 2 +
+                     (mid_lng - clng) ** 2)
+                if d < min_dist:
+                    min_dist = d
+                    nearest = i
+            grid_row.append(nearest)
+        grid.append(grid_row)
+
+    # Draw border lines where neighboring cells differ
+    for row in range(grid_size):
+        for col in range(grid_size):
+            curr = grid[row][col]
+            lat0 = bbox[0] + row * lat_step
+            lng0 = bbox[2] + col * lng_step
+            # Right neighbor
+            if col + 1 < grid_size and grid[row][col + 1] != curr:
+                folium.PolyLine(
+                    [[lat0, lng0 + lng_step],
+                     [lat0 + lat_step, lng0 + lng_step]],
+                    color="#FFFFFF", weight=2, opacity=0.6,
+                ).add_to(m)
+            # Bottom neighbor
+            if row + 1 < grid_size and grid[row + 1][col] != curr:
+                folium.PolyLine(
+                    [[lat0 + lat_step, lng0],
+                     [lat0 + lat_step, lng0 + lng_step]],
+                    color="#FFFFFF", weight=2, opacity=0.6,
+                ).add_to(m)
+
+    # Area name labels + stats at each center
+    nearby_summary = summary_df[
+        summary_df["area"].str.lower().str.strip().isin(
+            set(area_names)
         )
+    ]
 
-        popup_html = (
-            f'<div style="font-family: Palatino Linotype, serif;'
-            f' background: #1a1a2e; color: #e0e0e0; padding: 12px;'
-            f' border-radius: 8px; min-width: 160px;'
-            f' border-left: 4px solid {colors["border"]};">'
-            f'<b style="color: {colors["border"]}; font-size: 14px;'
-            f' letter-spacing: 1px;">{area_name}</b>'
-            f'<hr style="border-color: #333; margin: 6px 0;">'
-            f'<div style="font-size: 12px; line-height: 1.8;">'
-            f'Groups: <b>{total_groups}</b><br>'
-            f'Members: <b>{total_members}</b><br>'
-            f'Strength: <b>{strength}</b></div></div>'
-        )
+    # Map display name -> summary row for occupied areas
+    summary_lookup = {}
+    for _, srow in nearby_summary.iterrows():
+        summary_lookup[srow["area"].lower().strip()] = srow
 
-        folium.Polygon(
-            locations=polygon_points,
-            color=colors["border"],
-            fill=True,
-            fill_color=colors["fill"],
-            fill_opacity=0.35,
-            weight=2,
-            popup=folium.Popup(popup_html, max_width=200),
-            tooltip=f"{area_name} \u2014 {total_members} members",
-        ).add_to(m)
+    for name in area_names:
+        coords = nearby[name]
+        colors = area_color_map[name]
+        is_occupied = name in occupied_areas
+        srow = summary_lookup.get(name)
 
-        # Area name label
+        # Area name
+        display = name.title()
+        label_color = colors["border"] if is_occupied else "#777"
         label_html = (
-            f'<div style="font-family: Cinzel, Palatino Linotype, serif;'
-            f' font-size: 11px; font-weight: 700;'
-            f' color: {colors["border"]};'
-            f' text-shadow: 0 0 6px rgba(0,0,0,0.9),'
-            f' 0 0 12px rgba(0,0,0,0.7);'
+            f'<div style="font-family: Cinzel, serif;'
+            f' font-size: 12px; font-weight: 700;'
+            f' color: {label_color};'
+            f' text-shadow: 0 0 8px rgba(0,0,0,0.9);'
             f' text-align: center; letter-spacing: 1px;'
             f' text-transform: uppercase; white-space: nowrap;'
-            f' pointer-events: none;">{area_name}</div>'
+            f' pointer-events: none;">{display}</div>'
         )
         folium.Marker(
-            location=[area_row["latitude"] + poly_radius * 0.5,
-                      area_row["longitude"]],
+            location=[coords[0] + 0.002, coords[1]],
             icon=folium.DivIcon(
                 html=label_html,
-                icon_size=(150, 18),
-                icon_anchor=(75, 9),
+                icon_size=(160, 18),
+                icon_anchor=(80, 9),
             ),
         ).add_to(m)
 
-        # Stats below area name
-        count_html = (
-            f'<div style="font-family: Cormorant Garamond, serif;'
-            f' font-size: 10px; color: #aaa;'
-            f' text-shadow: 0 0 4px rgba(0,0,0,0.9);'
-            f' text-align: center; white-space: nowrap;'
-            f' pointer-events: none;">'
-            f'{total_groups} groups &middot;'
-            f' {total_members} members</div>'
-        )
+        # Stats line
+        if srow is not None:
+            groups = int(srow["total_groups"])
+            members = int(srow["total_members"])
+            stats_html = (
+                f'<div style="font-size: 10px; color: #bbb;'
+                f' text-shadow: 0 0 4px rgba(0,0,0,0.9);'
+                f' text-align: center; pointer-events: none;">'
+                f'{groups} groups &middot; {members} members</div>'
+            )
+        else:
+            stats_html = (
+                '<div style="font-size: 10px; color: #666;'
+                ' text-shadow: 0 0 4px rgba(0,0,0,0.9);'
+                ' text-align: center; pointer-events: none;">'
+                'No groups yet</div>'
+            )
         folium.Marker(
-            location=[area_row["latitude"] + poly_radius * 0.25,
-                      area_row["longitude"]],
+            location=[coords[0], coords[1]],
             icon=folium.DivIcon(
-                html=count_html,
-                icon_size=(150, 14),
-                icon_anchor=(75, 7),
+                html=stats_html,
+                icon_size=(160, 14),
+                icon_anchor=(80, 7),
             ),
         ).add_to(m)
 
-    # Individual group markers
+    # Group markers on top
+    nearby_df = df[
+        df["area"].str.lower().str.strip().isin(set(area_names))
+    ]
     for _, row in nearby_df.iterrows():
         members = int(row["members"])
-        area_name = row["area"]
-        colors = area_color_map.get(area_name, TERRITORY_PALETTE[0])
+        akey = row["area"].lower().strip()
+        colors = area_color_map.get(akey, TERRITORY_PALETTE[0])
 
         folium.CircleMarker(
             location=[row["latitude"], row["longitude"]],
-            radius=max(6, members * 0.4),
+            radius=max(5, members * 0.35),
             color="#FFFFFF",
             fill=True,
             fill_color=colors["border"],
             fill_opacity=0.9,
             weight=1.5,
-            tooltip=f"{row['leader_name']} \u2014 {members} members",
-        ).add_to(m)
-
-        folium.Marker(
-            location=[row["latitude"], row["longitude"]],
-            icon=folium.DivIcon(
-                html=(
-                    f'<div style="font-size: 9px; font-weight: bold;'
-                    f' color: #fff; text-align: center;'
-                    f' text-shadow: 0 0 4px rgba(0,0,0,0.9);'
-                    f' width: 24px; margin-left: -12px;'
-                    f' margin-top: -6px;">{members}</div>'
-                ),
-                icon_size=(24, 14),
+            tooltip=(
+                f"{row['leader_name']} \u2014 {members} members"
             ),
         ).add_to(m)
 
     # Legend
-    _add_territory_legend(m, area_color_map, nearby_summary, center_area)
+    _add_territory_legend(m, area_color_map, area_names,
+                          summary_lookup, occupied_areas, center_area)
 
     elapsed = time.perf_counter() - t0
-    logger.info("Territory map built: %d areas, %d markers in %.3fs",
-                len(unique_areas), len(nearby_df), elapsed)
+    logger.info("Territory map built in %.3fs", elapsed)
     return m
 
 
-def _add_territory_legend(m, area_color_map, summary_df, center_area):
-    """Add territory color legend to the map."""
+def _add_territory_legend(m, area_color_map, area_names,
+                          summary_lookup, occupied_areas, center_area):
+    """Add territory color legend."""
     items_html = ""
-    for _, row in summary_df.sort_values(
-        "total_members", ascending=False
-    ).iterrows():
-        area = row["area"]
-        colors = area_color_map.get(area, TERRITORY_PALETTE[0])
-        members = int(row["total_members"])
-        groups = int(row["total_groups"])
+    for name in sorted(area_names):
+        colors = area_color_map[name]
+        is_occ = name in occupied_areas
+        display = name.title()
+        srow = summary_lookup.get(name)
+        if srow is not None:
+            members = int(srow["total_members"])
+            groups = int(srow["total_groups"])
+            detail = f"{groups}g &middot; {members}m"
+        else:
+            detail = "empty"
+        label_color = "#e0e0e0" if is_occ else "#666"
         items_html += (
-            f'<div style="margin-bottom: 6px; display: flex;'
+            f'<div style="margin-bottom: 5px; display: flex;'
             f' align-items: center;">'
-            f'<div style="width: 14px; height: 14px; border-radius: 3px;'
+            f'<div style="width: 14px; height: 14px;'
+            f' border-radius: 2px;'
             f' background: {colors["fill"]};'
             f' border: 1px solid {colors["border"]};'
-            f' margin-right: 8px; flex-shrink: 0;"></div>'
-            f'<div><span style="color: #e0e0e0; font-size: 11px;'
-            f' font-weight: 600;">{area}</span>'
-            f'<span style="color: #888; font-size: 10px;">'
-            f' {groups}g &middot; {members}m</span></div></div>'
+            f' margin-right: 8px; flex-shrink: 0;'
+            f' opacity: {"1" if is_occ else "0.4"};"></div>'
+            f'<div><span style="color: {label_color};'
+            f' font-size: 11px;">{display}</span>'
+            f' <span style="color: #888; font-size: 9px;">'
+            f'{detail}</span></div></div>'
         )
 
-    total_areas = len(summary_df)
-    total_members = int(summary_df["total_members"].sum())
+    occ_count = sum(1 for n in area_names if n in occupied_areas)
+    total_count = len(area_names)
 
     legend_html = f"""
     <div style="
-        position: fixed;
-        bottom: 20px;
-        right: 10px;
-        z-index: 1000;
+        position: fixed; bottom: 20px; right: 10px; z-index: 1000;
         background: linear-gradient(145deg, #1e1e2f 0%, #252540 100%);
-        color: #e0e0e0;
-        padding: 16px 18px;
-        border-radius: 10px;
-        border: 1px solid #444;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-        font-family: 'Palatino Linotype', serif;
-        font-size: 12px;
-        min-width: 180px;
-        max-width: 260px;
-        max-height: 420px;
-        overflow-y: auto;
+        color: #e0e0e0; padding: 16px 18px; border-radius: 10px;
+        border: 1px solid #444; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        font-family: 'Palatino Linotype', serif; font-size: 12px;
+        min-width: 180px; max-width: 260px;
+        max-height: 420px; overflow-y: auto;
     ">
-        <div style="font-family: 'Cinzel', serif; font-size: 13px;
+        <div style="font-family: Cinzel, serif; font-size: 13px;
              font-weight: 700; letter-spacing: 2px;
              text-transform: uppercase; margin-bottom: 10px;
              border-bottom: 1px solid #444; padding-bottom: 8px;
              text-align: center; color: #ccc;">
-            {center_area} &amp; Nearby
+            {center_area.title()} Region
         </div>
         {items_html}
         <div style="border-top: 1px solid #444; padding-top: 8px;
              margin-top: 8px; font-size: 10px; color: #888;
              text-align: center;">
-            {total_areas} territories &middot; {total_members} total members
+            {occ_count}/{total_count} territories occupied
         </div>
     </div>
     """
