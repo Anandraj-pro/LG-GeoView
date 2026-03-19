@@ -705,53 +705,10 @@ st.markdown("""
     &#x2726; Kingdom Map</div>
 """, unsafe_allow_html=True)
 map_tab1, map_tab2 = st.tabs(
-    ["TKT Kingdom", "Territory Analysis"]
+    ["Territory Analysis", "TKT Kingdom"]
 )
 
 with map_tab1:
-    # --- TKT Kingdom Map ---
-    kingdom_summary = get_area_summary(df_filtered)
-
-    # Kingdom map
-    try:
-        kingdom_map = build_kingdom_map(
-            df_filtered, kingdom_summary, map_style=map_style_name
-        )
-        st_folium(kingdom_map, use_container_width=True, height=920,
-                  key="kingdom_map")
-    except Exception as e:
-        st.error(f"Could not render Kingdom map: {e}")
-
-    # Territory strength breakdown
-    st.markdown("""
-    <div style="background: linear-gradient(145deg, #FAF5E8 0%, #F0E6CC 100%);
-         padding: 16px 20px; border-radius: 10px; border: 1px solid #D4AF3733;
-         margin-top: 16px;">
-        <div style="font-family: 'Cinzel', serif; color: #8B6914; font-size: 14px;
-             letter-spacing: 2px; text-transform: uppercase;
-             text-align: center;">Territory Report</div>
-        <div style="font-family: 'Cormorant Garamond', serif;
-             font-size: 0.85rem; color: #A0936E; font-style: italic;
-             text-align: center; margin-top: 4px;">
-            "The Lord your God will bless you in all your harvest"
-            &mdash; Deuteronomy 16:15</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    territory_data = kingdom_summary.rename(columns={
-        "area": "Territory",
-        "total_groups": "Shepherds",
-        "total_members": "Souls",
-        "total_families": "Families",
-        "avg_members": "Avg per Group",
-        "strength": "Strength",
-    })[["Territory", "Shepherds", "Families", "Souls",
-        "Avg per Group", "Strength"]]
-    territory_data = territory_data.sort_values("Souls", ascending=False)
-    territory_data = territory_data.reset_index(drop=True)
-    st.dataframe(territory_data, use_container_width=True, hide_index=True)
-
-with map_tab2:
     # --- Advanced Territory Analysis ---
     st.markdown("""
     <div style="font-family: 'Cinzel', serif; font-size: 1rem;
@@ -770,16 +727,22 @@ with map_tab2:
     # Controls row
     tv_c1, tv_c2, tv_c3 = st.columns([1, 1, 1])
     with tv_c1:
+        area_options = sorted(df_filtered["area"].unique())
+        default_idx = 0
+        for i, a in enumerate(area_options):
+            if a.lower().strip() == "kukatpally":
+                default_idx = i
+                break
         focus_area = st.selectbox(
             "Center on area:",
-            options=sorted(df_filtered["area"].unique()),
-            index=0,
+            options=area_options,
+            index=default_idx,
             key="territory_focus_area",
         )
     with tv_c2:
         territory_radius = st.slider(
             "Nearby radius (km):",
-            min_value=1, max_value=10, value=3,
+            min_value=1, max_value=15, value=10,
             key="territory_radius",
         )
     with tv_c3:
@@ -847,6 +810,49 @@ with map_tab2:
             st.info(f"**{len(gaps)} expansion zones:** {', '.join(sorted(gaps))}")
         else:
             st.success("All nearby territories occupied!")
+
+with map_tab2:
+    # --- TKT Kingdom Map ---
+    kingdom_summary = get_area_summary(df_filtered)
+
+    try:
+        kingdom_map = build_kingdom_map(
+            df_filtered, kingdom_summary, map_style=map_style_name
+        )
+        st_folium(kingdom_map, use_container_width=True, height=920,
+                  key="kingdom_map")
+    except Exception as e:
+        st.error(f"Could not render Kingdom map: {e}")
+
+    st.markdown("""
+    <div style="background: linear-gradient(145deg, #FAF5E8 0%, #F0E6CC 100%);
+         padding: 16px 20px; border-radius: 10px; border: 1px solid #D4AF3733;
+         margin-top: 16px;">
+        <div style="font-family: 'Cinzel', serif; color: #8B6914; font-size: 14px;
+             letter-spacing: 2px; text-transform: uppercase;
+             text-align: center;">Territory Report</div>
+        <div style="font-family: 'Cormorant Garamond', serif;
+             font-size: 0.85rem; color: #A0936E; font-style: italic;
+             text-align: center; margin-top: 4px;">
+            &ldquo;The Lord your God will bless you in all your harvest&rdquo;
+            &mdash; Deuteronomy 16:15</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    territory_data = kingdom_summary.rename(columns={
+        "area": "Territory",
+        "total_groups": "Shepherds",
+        "total_members": "Souls",
+        "total_families": "Families",
+        "avg_members": "Avg per Group",
+        "strength": "Strength",
+    })[["Territory", "Shepherds", "Families", "Souls",
+        "Avg per Group", "Strength"]]
+    territory_data = territory_data.sort_values(
+        "Souls", ascending=False
+    ).reset_index(drop=True)
+    st.dataframe(territory_data, use_container_width=True,
+                 hide_index=True)
 
 # --- Drill-Down Section ---
 st.markdown("<div style='margin-top: 60px;'></div>", unsafe_allow_html=True)
