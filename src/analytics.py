@@ -2,7 +2,20 @@
 
 from __future__ import annotations
 
+import math
+
 import pandas as pd
+
+
+def haversine_km(lat1, lon1, lat2, lon2):
+    """Calculate great-circle distance between two points in km."""
+    R = 6371  # Earth radius in km
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = (math.sin(dlat / 2) ** 2 +
+         math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) *
+         math.sin(dlon / 2) ** 2)
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
 def compute_territory_coverage(
@@ -37,8 +50,8 @@ def compute_territory_coverage(
 
     nearby_set: set[str] = set()
     for area_name, coords in area_coordinates.items():
-        dist = ((coords[0] - cc[0]) ** 2 + (coords[1] - cc[1]) ** 2) ** 0.5
-        if dist <= radius_km * 0.01:
+        dist = haversine_km(cc[0], cc[1], coords[0], coords[1])
+        if dist <= radius_km:
             nearby_set.add(area_name)
 
     occupied_count = sum(1 for n in nearby_set if n in occupied_areas)

@@ -1184,7 +1184,7 @@ with map_tab1:
         t_map = build_advanced_territory_map(
             df_filtered, territory_summary,
             center_area=focus_area,
-            radius=territory_radius * 0.01,
+            radius=territory_radius,
             color_by=color_by,
             layers=layer_config,
         )
@@ -1479,7 +1479,7 @@ st.markdown("""
          margin: 12px auto;"></div>
     <div style="font-family: 'Cinzel', serif;
          color: var(--text-muted); font-size: 0.75rem; letter-spacing: 2px;">
-        TKT Kingdom v1.1 &#183; West Campus &#183; Hyderabad
+        TKT Kingdom v1.2 &#183; West Campus &#183; Hyderabad
     </div>
 </div>
 """, unsafe_allow_html=True)

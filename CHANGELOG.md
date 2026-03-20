@@ -2,6 +2,55 @@
 
 All notable changes to LG GeoView are documented here.
 
+## [1.2.0] - 2026-03-20
+
+### Sprint 4: Kingdom Views
+- King's Kingdom map with golden territory markers and strength-based glow
+- Territory View with Voronoi polygon boundaries per area
+- Ward boundaries using GHMC administrative polygons
+- KML export for territory data
+
+### Sprint 5: UI/UX Overhaul
+- Animated hero banner with floating shapes and fade-up entrance
+- Moving border animations on badge and KPI cards
+- Shimmer text effect on "Expanding His Territory" heading
+- Full kingdom theme (Cinzel + Cormorant Garamond fonts, gold palette)
+- Dark/light mode toggle with CSS custom properties
+- Glassmorphism sidebar with blur and gradient effects
+- Mobile responsive layout (480px, 768px, 360px breakpoints)
+- Scripture verses in section headers and footer
+- TKT Kingdom rebrand (name, icons, copy)
+
+### Sprint 6: Mobile Fixes
+- Sidebar collapse button fix for mobile icon rendering
+- Layer control positioned to avoid legend overlap
+- Legend overlap fix on small screens (auto-hide on mobile)
+- Map bounds locked to ORR west sector for consistent framing
+
+### Sprint 7: Security Hardening
+- Legal tile providers only (OpenStreetMap, ESRI, Stadia, CartoDB)
+- HTML escaping on all user-supplied data in popups and labels
+- Authentication gate with bcrypt hashed credentials (auth.yaml)
+- Error boundaries around all charts and maps (graceful degradation)
+- Analytics module extracted from app.py (compute_kpi_metrics, compute_territory_coverage)
+- Dependency pinning in requirements.txt
+- Google Sheets loader timeout and URL validation
+
+### Sprint 8: Code Quality
+- Removed dead code: build_map, build_detailed_map, _add_legend functions
+- Haversine distance calculation replacing Euclidean approximation
+- CI matrix expanded to Python 3.10, 3.11, 3.12
+- Fixed variable shadowing (st -> strength_val in map_builder)
+- Pre-commit hooks configured (trailing-whitespace, end-of-file, flake8)
+
+### Sprint 9: UX Polish
+- Chart dark mode support matching theme toggle
+- Font preloading for Cinzel and Cormorant Garamond
+- Area comparison side-by-side widget
+- Keyboard focus-visible accessibility styling
+- Downloadable printable HTML report
+- Data snapshots with CSV and Excel export
+
 ## [1.1.0] - 2026-03-19
 
 ### Added

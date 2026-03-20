@@ -7,7 +7,7 @@ import folium
 import plotly.graph_objects as go
 
 from src.data_loader import load_from_csv, assign_strength, get_area_summary
-from src.map_builder import build_map, build_detailed_map
+from src.map_builder import build_kingdom_map
 from src.charts import (
     members_by_area_chart,
     groups_by_area_chart,
@@ -43,12 +43,9 @@ class TestEndToEndFlow:
         assert not summary.empty
         assert "total_groups" in summary.columns
 
-        # Step 4: Build maps
-        overview_map = build_map(df)
-        assert isinstance(overview_map, folium.Map)
-
-        detailed_map = build_detailed_map(df)
-        assert isinstance(detailed_map, folium.Map)
+        # Step 4: Build kingdom map
+        kingdom_map = build_kingdom_map(df, summary)
+        assert isinstance(kingdom_map, folium.Map)
 
         # Step 5: Generate all charts
         assert isinstance(members_by_area_chart(df), go.Figure)
@@ -78,11 +75,11 @@ class TestEndToEndFlow:
         assert not filtered.empty
         assert filtered["area"].nunique() == 1
 
-        # Maps and charts should work with filtered data
-        m = build_map(filtered)
+        # Kingdom map should work with filtered data
+        summary = get_area_summary(filtered)
+        m = build_kingdom_map(filtered, summary)
         assert isinstance(m, folium.Map)
 
-        summary = get_area_summary(filtered)
         assert len(summary) == 1
 
         assert isinstance(members_by_area_chart(filtered), go.Figure)

@@ -6,7 +6,28 @@ from src.analytics import (
     compute_kpi_metrics,
     compute_territory_coverage,
     generate_html_report,
+    haversine_km,
 )
+
+
+class TestHaversineKm:
+    """Tests for haversine_km distance calculation."""
+
+    def test_same_point_returns_zero(self):
+        """Distance from a point to itself should be 0."""
+        assert haversine_km(17.4948, 78.3996, 17.4948, 78.3996) == 0.0
+
+    def test_kukatpally_to_patancheru(self):
+        """Kukatpally to Patancheru should be roughly 14-15 km."""
+        # Kukatpally: 17.4948, 78.3996
+        # Patancheru: 17.5322, 78.2640
+        dist = haversine_km(17.4948, 78.3996, 17.5322, 78.2640)
+        assert 14 <= dist <= 15
+
+    def test_one_degree_at_equator(self):
+        """Two points 1 degree apart at equator should be ~111 km."""
+        dist = haversine_km(0.0, 0.0, 0.0, 1.0)
+        assert 110 <= dist <= 112
 
 
 class TestComputeTerritoryCoverage:
