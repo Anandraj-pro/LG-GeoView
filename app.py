@@ -1,10 +1,10 @@
-"""TKT Kingdom — West Campus Care Group Dashboard."""
+"""TKT Kingdom -- West Campus Care Group Dashboard."""
 
 import io
 import os
 
+import bcrypt
 import streamlit as st
-import streamlit_authenticator as stauth
 import pandas as pd
 import yaml
 from streamlit_folium import st_folium
@@ -32,45 +32,59 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+
 # --- Authentication ---
-auth_config_path = os.path.join(
-    os.path.dirname(__file__), "config", "auth.yaml"
-)
-try:
-    with open(auth_config_path) as f:
-        auth_config = yaml.safe_load(f)
-
-    authenticator = stauth.Authenticate(
-        auth_config["credentials"],
-        auth_config["cookie"]["name"],
-        auth_config["cookie"]["key"],
-        auth_config["cookie"]["expiry_days"],
+def _check_auth():
+    """Simple password auth using bcrypt hashed credentials."""
+    auth_path = os.path.join(
+        os.path.dirname(__file__), "config", "auth.yaml"
     )
+    try:
+        with open(auth_path) as f:
+            config = yaml.safe_load(f)
+    except FileNotFoundError:
+        return True  # No config = open access (dev mode)
 
-    authenticator.login()
+    if st.session_state.get("authenticated"):
+        return True
 
-    if st.session_state.get("authentication_status") is None:
-        st.markdown("""
-        <div style="text-align: center; padding: 60px 20px;
-             font-family: 'Cinzel', serif;">
-            <div style="font-size: 2rem; color: #D4AF37;
-                 letter-spacing: 3px; margin-bottom: 12px;">
-                TKT Kingdom</div>
-            <div style="font-size: 1rem; color: #888;
-                 font-family: 'Cormorant Garamond', serif;
-                 font-style: italic;">
-                West Campus - Hyderabad</div>
-            <div style="margin-top: 20px; font-size: 0.85rem;
-                 color: #666;">Please log in to access the dashboard
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        st.stop()
-    elif st.session_state.get("authentication_status") is False:
-        st.error("Invalid username or password")
-        st.stop()
-except FileNotFoundError:
-    pass  # No auth config = open access (dev mode)
+    st.markdown("""
+    <div style="text-align: center; padding: 40px 20px;">
+        <div style="font-family: 'Cinzel', serif; font-size: 2rem;
+             color: #D4AF37; letter-spacing: 3px;
+             margin-bottom: 8px;">TKT Kingdom</div>
+        <div style="font-family: 'Cormorant Garamond', serif;
+             font-size: 1rem; color: #888;
+             font-style: italic;">
+             West Campus - Hyderabad</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns([1, 1.5, 1])
+    with col2:
+        username = st.text_input("Username", key="login_user")
+        password = st.text_input(
+            "Password", type="password", key="login_pass"
+        )
+        if st.button("Login", use_container_width=True):
+            users = config.get("credentials", {}).get("usernames", {})
+            if username in users:
+                stored_hash = users[username]["password"]
+                if bcrypt.checkpw(
+                    password.encode(), stored_hash.encode()
+                ):
+                    st.session_state["authenticated"] = True
+                    st.session_state["auth_user"] = username
+                    st.session_state["auth_name"] = users[
+                        username
+                    ].get("name", username)
+                    st.rerun()
+            st.error("Invalid username or password")
+    return False
+
+
+if not _check_auth():
+    st.stop()
 
 # --- Viewport meta for mobile ---
 st.markdown(
@@ -861,10 +875,14 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
     # User info + logout
-    if st.session_state.get("authentication_status"):
-        user_name = st.session_state.get("name", "User")
+    if st.session_state.get("authenticated"):
+        user_name = st.session_state.get("auth_name", "User")
         st.caption(f"Logged in as: {user_name}")
-        authenticator.logout("Logout", "sidebar")
+        if st.button("Logout", key="logout_btn"):
+            st.session_state["authenticated"] = False
+            st.session_state.pop("auth_user", None)
+            st.session_state.pop("auth_name", None)
+            st.rerun()
 
     st.markdown("---")
 
