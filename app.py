@@ -1010,6 +1010,28 @@ with map_tab1:
 
     territory_summary = get_area_summary(df_filtered)
 
+    # Territory coverage KPIs
+    from src.data_loader import AREA_COORDINATES
+    nearby_set = set()
+    ck = focus_area.lower().strip()
+    cc = AREA_COORDINATES.get(ck, [17.4948, 78.3996])
+    for an, ac in AREA_COORDINATES.items():
+        dist = ((ac[0] - cc[0])**2 + (ac[1] - cc[1])**2)**0.5
+        if dist <= territory_radius * 0.01:
+            nearby_set.add(an)
+    occ_set = set(df_filtered["area"].str.lower().str.strip().unique())
+    occupied_count = sum(1 for n in nearby_set if n in occ_set)
+    total_nearby = len(nearby_set)
+    uncovered = [n.title() for n in nearby_set if n not in occ_set]
+
+    tk1, tk2, tk3 = st.columns(3)
+    tk1.metric("Occupied", f"{occupied_count}/{total_nearby}")
+    tk2.metric("Uncovered", len(uncovered))
+    if uncovered:
+        tk3.caption(f"{', '.join(sorted(uncovered))}")
+    else:
+        tk3.success("All covered")
+
     layer_config = {
         "boundaries": show_boundaries,
         "markers": show_markers,
@@ -1032,14 +1054,13 @@ with map_tab1:
         st.error(f"Could not render territory map: {e}")
 
     # Export section
-    st.markdown("---")
-    exp_c1, exp_c2, exp_c3 = st.columns(3)
+    exp_c1, exp_c2 = st.columns(2)
     with exp_c1:
         kml_data = generate_territory_kml(
             df_filtered, territory_summary
         )
         st.download_button(
-            label="Export KML (Google Earth)",
+            label="Export KML",
             data=kml_data.encode("utf-8"),
             file_name="lg_geoview_territories.kml",
             mime="application/vnd.google-earth.kml+xml",
@@ -1047,26 +1068,11 @@ with map_tab1:
     with exp_c2:
         csv_export = territory_summary.to_csv(index=False)
         st.download_button(
-            label="Export Territory Data (CSV)",
+            label="Export CSV",
             data=csv_export.encode("utf-8"),
-            file_name=f"territory_data_{pd.Timestamp.now().strftime('%Y-%m-%d')}.csv",
+            file_name=f"territory_{pd.Timestamp.now().strftime('%Y-%m-%d')}.csv",
             mime="text/csv",
         )
-    with exp_c3:
-        from src.data_loader import AREA_COORDINATES
-        nearby_set = set()
-        ck = focus_area.lower().strip()
-        cc = AREA_COORDINATES.get(ck, [17.4948, 78.3996])
-        for an, ac in AREA_COORDINATES.items():
-            dist = ((ac[0] - cc[0])**2 + (ac[1] - cc[1])**2)**0.5
-            if dist <= territory_radius * 0.01:
-                nearby_set.add(an)
-        occ = set(df_filtered["area"].str.lower().str.strip().unique())
-        gaps = [n.title() for n in nearby_set if n not in occ]
-        if gaps:
-            st.info(f"**{len(gaps)} expansion zones:** {', '.join(sorted(gaps))}")
-        else:
-            st.success("All nearby territories occupied!")
 
 with map_tab2:
     # --- TKT Kingdom Map ---

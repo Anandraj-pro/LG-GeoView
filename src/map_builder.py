@@ -1351,8 +1351,7 @@ def build_advanced_territory_map(
     """
     m.get_root().html.add_child(folium.Element(mobile_css))
 
-    # Color mode legend (bottom-left)
-    _add_advanced_legend(m, color_by, area_names, occupied, center_area)
+    # Legend removed — shown as KPIs in Streamlit UI instead
 
     elapsed = time.perf_counter() - t0
     logger.info("Advanced territory map built in %.3fs", elapsed)
