@@ -1,8 +1,12 @@
-"""LG GeoView — Care Group Distribution Dashboard for Hyderabad West."""
+"""TKT Kingdom — West Campus Care Group Dashboard."""
 
 import io
+import os
+
 import streamlit as st
+import streamlit_authenticator as stauth
 import pandas as pd
+import yaml
 from streamlit_folium import st_folium
 from src.data_loader import (
     load_from_excel, load_from_csv, load_from_upload,
@@ -27,6 +31,46 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed",
 )
+
+# --- Authentication ---
+auth_config_path = os.path.join(
+    os.path.dirname(__file__), "config", "auth.yaml"
+)
+try:
+    with open(auth_config_path) as f:
+        auth_config = yaml.safe_load(f)
+
+    authenticator = stauth.Authenticate(
+        auth_config["credentials"],
+        auth_config["cookie"]["name"],
+        auth_config["cookie"]["key"],
+        auth_config["cookie"]["expiry_days"],
+    )
+
+    authenticator.login()
+
+    if st.session_state.get("authentication_status") is None:
+        st.markdown("""
+        <div style="text-align: center; padding: 60px 20px;
+             font-family: 'Cinzel', serif;">
+            <div style="font-size: 2rem; color: #D4AF37;
+                 letter-spacing: 3px; margin-bottom: 12px;">
+                TKT Kingdom</div>
+            <div style="font-size: 1rem; color: #888;
+                 font-family: 'Cormorant Garamond', serif;
+                 font-style: italic;">
+                West Campus - Hyderabad</div>
+            <div style="margin-top: 20px; font-size: 0.85rem;
+                 color: #666;">Please log in to access the dashboard
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        st.stop()
+    elif st.session_state.get("authentication_status") is False:
+        st.error("Invalid username or password")
+        st.stop()
+except FileNotFoundError:
+    pass  # No auth config = open access (dev mode)
 
 # --- Viewport meta for mobile ---
 st.markdown(
@@ -815,6 +859,13 @@ with st.sidebar:
             West Campus &#183; Hyderabad</div>
     </div>
     """, unsafe_allow_html=True)
+
+    # User info + logout
+    if st.session_state.get("authentication_status"):
+        user_name = st.session_state.get("name", "User")
+        st.caption(f"Logged in as: {user_name}")
+        authenticator.logout("Logout", "sidebar")
+
     st.markdown("---")
 
     # Theme toggle

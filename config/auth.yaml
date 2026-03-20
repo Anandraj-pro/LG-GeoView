@@ -1,0 +1,18 @@
+credentials:
+  usernames:
+    admin:
+      email: admin@tktkingdom.org
+      name: Administrator
+      password: $2b$12$x7axp565kUEMFLxAdA9UIOhiAfVHoabFvRETmqQ.reBh5X.Bi4Ecy
+    pastor:
+      email: pastor@tktkingdom.org
+      name: Pastor
+      password: $2b$12$AVNlMRW.48tKOX07B1w2we0EA9zPNTKZjpchLQhfYQ0rXD90FFAKa
+    leader:
+      email: leader@tktkingdom.org
+      name: LG Leader
+      password: $2b$12$77m7ymHRv7IeQ/9m8V7UYOaAyScSoNcjUvON5YB/0qltmcaRlMOM6
+cookie:
+  expiry_days: 30
+  key: tkt_kingdom_auth_key_2026
+  name: tkt_kingdom_auth
