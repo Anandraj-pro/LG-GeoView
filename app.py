@@ -22,7 +22,9 @@ from src.charts import (  # noqa: F401
     area_detail_table, meeting_day_chart, top_bottom_groups_chart,
     leader_members_chart,
 )
-from src.analytics import compute_kpi_metrics, compute_territory_coverage
+from src.analytics import (
+    compute_kpi_metrics, compute_territory_coverage, generate_html_report,
+)
 
 # --- Page Config ---
 st.set_page_config(
@@ -93,13 +95,19 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# --- Font Preloading (Task 2) ---
+st.markdown(
+    '<link rel="preload" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap"'
+    ' as="style" onload="this.onload=null;this.rel=\'stylesheet\'">'
+    '<link rel="preload" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond'
+    ':ital,wght@0,400;0,600;1,400&display=swap"'
+    ' as="style" onload="this.onload=null;this.rel=\'stylesheet\'">',
+    unsafe_allow_html=True,
+)
+
 # --- Custom Styling ---
 st.markdown("""
 <style>
-    /* --- Theme Variables --- */
-    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap');
-    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap');
-
     :root {
         --bg: #0a0a0f;
         --bg-secondary: #111118;
@@ -269,6 +277,12 @@ st.markdown("""
         margin-top: 4px;
     }
 
+    /* --- Focus-visible for keyboard navigation (Task 5) --- */
+    *:focus-visible {
+        outline: 2px solid #D4AF37 !important;
+        outline-offset: 2px !important;
+    }
+
     /* --- Hero Banner with Animated Shapes --- */
     @keyframes float1 {
         0%, 100% { transform: translateY(0) rotate(12deg); }
@@ -418,7 +432,7 @@ st.markdown("""
     .hero-badge-text {
         font-family: 'Cormorant Garamond', serif !important;
         font-size: 0.85rem;
-        color: rgba(255,255,255,0.5);
+        color: rgba(255,255,255,0.65);
         letter-spacing: 2px;
     }
 
@@ -462,7 +476,7 @@ st.markdown("""
     .hero-scripture {
         font-family: 'Cormorant Garamond', serif !important;
         font-size: 0.95rem;
-        color: rgba(255,255,255,0.3);
+        color: rgba(255,255,255,0.55);
         font-style: italic;
         margin-top: 18px;
         line-height: 1.6;
@@ -543,7 +557,7 @@ st.markdown("""
     .hero-kpi-label {
         font-family: 'Cormorant Garamond', serif;
         font-size: 0.75rem;
-        color: rgba(255,255,255,0.45);
+        color: rgba(255,255,255,0.6);
         letter-spacing: 1.5px;
         text-transform: uppercase;
         margin-top: 2px;
@@ -1057,7 +1071,7 @@ if df_filtered.empty:
 # --- Kingdom Banner (KPIs via analytics module) ---
 kpi = compute_kpi_metrics(df_filtered)
 
-hero_html = f"""<div class="hero-banner">\
+hero_html = f"""<div class="hero-banner" role="banner" aria-label="TKT Kingdom dashboard hero banner">\
 <div class="hero-shape hero-shape-1"></div>\
 <div class="hero-shape hero-shape-2"></div>\
 <div class="hero-shape hero-shape-3"></div>\
@@ -1105,6 +1119,9 @@ hero_html = f"""<div class="hero-banner">\
 </div>\
 </div>"""
 st.markdown(hero_html, unsafe_allow_html=True)
+
+# Determine chart dark mode based on light_mode toggle
+chart_dark = not light_mode
 
 # --- Map ---
 map_tab1, map_tab2 = st.tabs(
@@ -1240,6 +1257,40 @@ with map_tab2:
     st.dataframe(territory_data, use_container_width=True,
                  hide_index=True)
 
+# --- Area Comparison (Task 4) ---
+st.markdown("---")
+st.markdown("""<div style="font-family: 'Cinzel', serif; font-size: 1.1rem;
+     color: var(--text-heading); letter-spacing: 2px; margin-bottom: 4px;">
+    &#x2666; Area Comparison</div>""", unsafe_allow_html=True)
+
+comp_c1, comp_c2 = st.columns(2)
+area_list = sorted(df_filtered["area"].unique())
+with comp_c1:
+    area_a = st.selectbox("Area A:", area_list, index=0, key="comp_a")
+with comp_c2:
+    area_b = st.selectbox(
+        "Area B:", area_list,
+        index=min(1, len(area_list) - 1), key="comp_b",
+    )
+
+if area_a and area_b:
+    data_a = df_filtered[df_filtered["area"] == area_a]
+    data_b = df_filtered[df_filtered["area"] == area_b]
+
+    mc1, mc2 = st.columns(2)
+    with mc1:
+        st.markdown(f"**{area_a}**")
+        st.metric("Groups", len(data_a))
+        st.metric("Total Members", int(data_a["members"].sum()))
+        st.metric("Families", int(data_a["families"].sum()))
+        st.metric("Avg per Group", f"{data_a['members'].mean():.1f}")
+    with mc2:
+        st.markdown(f"**{area_b}**")
+        st.metric("Groups", len(data_b))
+        st.metric("Total Members", int(data_b["members"].sum()))
+        st.metric("Families", int(data_b["families"].sum()))
+        st.metric("Avg per Group", f"{data_b['members'].mean():.1f}")
+
 # --- Drill-Down Section ---
 st.markdown("<div style='margin-top: 60px;'></div>", unsafe_allow_html=True)
 st.markdown("---")
@@ -1333,13 +1384,13 @@ chart_col1, chart_col2 = st.columns(2)
 
 with chart_col1:
     try:
-        st.plotly_chart(members_by_area_chart(df_filtered), use_container_width=True)
+        st.plotly_chart(members_by_area_chart(df_filtered, dark=chart_dark), use_container_width=True)
     except Exception:
         st.warning("Members by area chart unavailable.")
 
 with chart_col2:
     try:
-        st.plotly_chart(groups_by_area_chart(df_filtered), use_container_width=True)
+        st.plotly_chart(groups_by_area_chart(df_filtered, dark=chart_dark), use_container_width=True)
     except Exception:
         st.warning("Groups by area chart unavailable.")
 
@@ -1348,13 +1399,13 @@ chart_col3, chart_col4 = st.columns(2)
 
 with chart_col3:
     try:
-        st.plotly_chart(meeting_day_chart(df_filtered), use_container_width=True)
+        st.plotly_chart(meeting_day_chart(df_filtered, dark=chart_dark), use_container_width=True)
     except Exception:
         st.warning("Meeting day chart unavailable.")
 
 with chart_col4:
     try:
-        st.plotly_chart(top_bottom_groups_chart(df_filtered), use_container_width=True)
+        st.plotly_chart(top_bottom_groups_chart(df_filtered, dark=chart_dark), use_container_width=True)
     except Exception:
         st.warning("Top/bottom groups chart unavailable.")
 
@@ -1363,13 +1414,13 @@ chart_col5, chart_col6 = st.columns(2)
 
 with chart_col5:
     try:
-        st.plotly_chart(strength_pie_chart(df_filtered), use_container_width=True)
+        st.plotly_chart(strength_pie_chart(df_filtered, dark=chart_dark), use_container_width=True)
     except Exception:
         st.warning("Strength distribution chart unavailable.")
 
 with chart_col6:
     try:
-        st.plotly_chart(leader_members_chart(df_filtered), use_container_width=True)
+        st.plotly_chart(leader_members_chart(df_filtered, dark=chart_dark), use_container_width=True)
     except Exception:
         st.warning("Leader members chart unavailable.")
 
@@ -1398,6 +1449,16 @@ st.dataframe(
     })[["Area", "Care Groups", "Families", "Individuals", "Total Members", "Avg Members", "Strength"]],
     use_container_width=True,
     hide_index=True,
+)
+
+# --- Print Report (Task 6) ---
+report_html = generate_html_report(df_filtered, summary_df, kpi)
+st.download_button(
+    label="Download Printable Report (HTML)",
+    data=report_html.encode("utf-8"),
+    file_name=f"tkt_kingdom_report_{pd.Timestamp.now().strftime('%Y-%m-%d')}.html",
+    mime="text/html",
+    key="print_report_btn",
 )
 
 # --- Footer ---

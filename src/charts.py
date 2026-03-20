@@ -34,10 +34,41 @@ LIGHT_LAYOUT = dict(
     legend=dict(font=dict(color="#333333")),
 )
 
+# Dark mode layout — dark bg, light text
+DARK_LAYOUT = dict(
+    plot_bgcolor="#0a0a0f",
+    paper_bgcolor="#0a0a0f",
+    font=dict(color="#e0ddd5", size=12),
+    title_font=dict(color="#D4AF37", size=16),
+    xaxis=dict(
+        gridcolor="#222",
+        tickfont=dict(color="#8a8578"),
+        title_font=dict(color="#e0ddd5"),
+    ),
+    yaxis=dict(
+        gridcolor="#222",
+        tickfont=dict(color="#8a8578"),
+        title_font=dict(color="#e0ddd5"),
+    ),
+    legend=dict(font=dict(color="#e0ddd5")),
+)
 
-def members_by_area_chart(df: pd.DataFrame) -> go.Figure:
+
+def get_layout(dark: bool = True) -> dict:
+    """Return the appropriate layout dict for the current theme.
+
+    Parameters
+    ----------
+    dark : bool
+        If True return DARK_LAYOUT, otherwise LIGHT_LAYOUT.
+    """
+    return DARK_LAYOUT if dark else LIGHT_LAYOUT
+
+
+def members_by_area_chart(df: pd.DataFrame, dark: bool = True) -> go.Figure:
     """Stacked bar chart: families + individuals by area."""
     logger.debug("Generating members_by_area_chart")
+    layout = get_layout(dark)
     area_data = df.groupby("area").agg(
         families=("families", "sum"),
         individuals=("individuals", "sum"),
@@ -56,20 +87,22 @@ def members_by_area_chart(df: pd.DataFrame) -> go.Figure:
         marker_color="#74b9ff",
     ))
 
+    legend_color = layout["legend"]["font"]["color"]
     fig.update_layout(
         barmode="stack",
         title="Families & Individuals by Area",
-        **LIGHT_LAYOUT,
+        **layout,
         height=400,
         margin=dict(l=20, r=20, t=40, b=20),
     )
-    fig.update_layout(legend=dict(orientation="h", y=-0.15, font=dict(color="#333333")))
+    fig.update_layout(legend=dict(orientation="h", y=-0.15, font=dict(color=legend_color)))
     return fig
 
 
-def groups_by_area_chart(df: pd.DataFrame) -> go.Figure:
+def groups_by_area_chart(df: pd.DataFrame, dark: bool = True) -> go.Figure:
     """Bar chart: care group count by area."""
     logger.debug("Generating groups_by_area_chart")
+    layout = get_layout(dark)
     area_data = df.groupby("area")["lg_group"].count().sort_values(ascending=True).reset_index()
     area_data.columns = ["area", "groups"]
 
@@ -83,7 +116,7 @@ def groups_by_area_chart(df: pd.DataFrame) -> go.Figure:
         color_continuous_scale=["#fdcb6e", "#00b894"],
     )
     fig.update_layout(
-        **LIGHT_LAYOUT,
+        **layout,
         showlegend=False,
         coloraxis_showscale=False,
         height=400,
@@ -92,9 +125,10 @@ def groups_by_area_chart(df: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def strength_pie_chart(df: pd.DataFrame) -> go.Figure:
+def strength_pie_chart(df: pd.DataFrame, dark: bool = True) -> go.Figure:
     """Pie chart: Strong / Medium / Weak distribution."""
     logger.debug("Generating strength_pie_chart")
+    layout = get_layout(dark)
     strength_counts = df["strength"].value_counts().reset_index()
     strength_counts.columns = ["strength", "count"]
 
@@ -108,21 +142,23 @@ def strength_pie_chart(df: pd.DataFrame) -> go.Figure:
         hole=0.4,
     )
     fig.update_layout(
-        plot_bgcolor="#ffffff",
-        paper_bgcolor="#ffffff",
-        font=dict(color="#333333", size=12),
-        title_font=dict(color="#222222", size=16),
-        legend=dict(font=dict(color="#333333")),
+        plot_bgcolor=layout["plot_bgcolor"],
+        paper_bgcolor=layout["paper_bgcolor"],
+        font=layout["font"],
+        title_font=layout["title_font"],
+        legend=layout["legend"],
         height=400,
         margin=dict(l=20, r=20, t=40, b=20),
     )
-    fig.update_traces(textfont=dict(color="#333333"))
+    text_color = layout["font"]["color"]
+    fig.update_traces(textfont=dict(color=text_color))
     return fig
 
 
-def meeting_day_chart(df: pd.DataFrame) -> go.Figure:
+def meeting_day_chart(df: pd.DataFrame, dark: bool = True) -> go.Figure:
     """Donut chart: distribution of meeting days across care groups."""
     logger.debug("Generating meeting_day_chart")
+    layout = get_layout(dark)
     day_counts = df[df["meeting_day"].str.strip() != ""].groupby("meeting_day").size().reset_index()
     day_counts.columns = ["day", "count"]
     day_counts = day_counts.sort_values("count", ascending=False)
@@ -138,21 +174,23 @@ def meeting_day_chart(df: pd.DataFrame) -> go.Figure:
         color_discrete_sequence=day_colors,
     )
     fig.update_layout(
-        plot_bgcolor="#ffffff",
-        paper_bgcolor="#ffffff",
-        font=dict(color="#333333", size=12),
-        title_font=dict(color="#222222", size=16),
-        legend=dict(font=dict(color="#333333")),
+        plot_bgcolor=layout["plot_bgcolor"],
+        paper_bgcolor=layout["paper_bgcolor"],
+        font=layout["font"],
+        title_font=layout["title_font"],
+        legend=layout["legend"],
         height=350,
         margin=dict(l=20, r=20, t=40, b=20),
     )
-    fig.update_traces(textfont=dict(color="#333333"))
+    text_color = layout["font"]["color"]
+    fig.update_traces(textfont=dict(color=text_color))
     return fig
 
 
-def top_bottom_groups_chart(df: pd.DataFrame) -> go.Figure:
+def top_bottom_groups_chart(df: pd.DataFrame, dark: bool = True) -> go.Figure:
     """Horizontal bar showing top 5 and bottom 5 care groups by members."""
     logger.debug("Generating top_bottom_groups_chart")
+    layout = get_layout(dark)
     sorted_df = df.sort_values("members", ascending=False)
     top5 = sorted_df.head(5)
     bottom5 = sorted_df.tail(5)
@@ -171,7 +209,7 @@ def top_bottom_groups_chart(df: pd.DataFrame) -> go.Figure:
     ))
     fig.update_layout(
         title="Top 5 & Bottom 5 Groups by Members",
-        **LIGHT_LAYOUT,
+        **layout,
         height=380,
         margin=dict(l=20, r=20, t=40, b=20),
         showlegend=False,
@@ -179,9 +217,10 @@ def top_bottom_groups_chart(df: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def leader_members_chart(df: pd.DataFrame) -> go.Figure:
+def leader_members_chart(df: pd.DataFrame, dark: bool = True) -> go.Figure:
     """Bar chart: total members managed by each leader."""
     logger.debug("Generating leader_members_chart")
+    layout = get_layout(dark)
     leader_data = df.groupby("leader_name").agg(
         members=("members", "sum"),
         groups=("lg_group", "count"),
@@ -198,7 +237,7 @@ def leader_members_chart(df: pd.DataFrame) -> go.Figure:
     ))
     fig.update_layout(
         title="Total Members per Leader",
-        **LIGHT_LAYOUT,
+        **layout,
         height=500,
         margin=dict(l=20, r=20, t=40, b=20),
         showlegend=False,

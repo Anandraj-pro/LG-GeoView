@@ -2,7 +2,11 @@
 
 import pandas as pd
 
-from src.analytics import compute_kpi_metrics, compute_territory_coverage
+from src.analytics import (
+    compute_kpi_metrics,
+    compute_territory_coverage,
+    generate_html_report,
+)
 
 
 class TestComputeTerritoryCoverage:
@@ -113,3 +117,74 @@ class TestComputeKpiMetrics:
         metrics = compute_kpi_metrics(df)
         assert metrics["strong_count"] == 1
         assert metrics["weak_count"] == 2
+
+
+class TestGenerateHtmlReport:
+    """Tests for generate_html_report."""
+
+    def test_returns_string(self):
+        """Should return a string."""
+        df = pd.DataFrame({
+            "area": ["A"], "lg_group": ["LG1"], "leader_name": ["L1"],
+            "families": [5], "individuals": [7], "members": [12],
+            "meeting_day": ["Sunday"],
+        })
+        summary = pd.DataFrame({
+            "area": ["A"], "total_groups": [1], "total_families": [5],
+            "total_members": [12], "avg_members": [12.0], "strength": ["Weak"],
+        })
+        kpi = {"num_areas": 1, "total_groups": 1, "total_members": 12,
+               "total_families": 5, "strong_count": 0}
+        result = generate_html_report(df, summary, kpi)
+        assert isinstance(result, str)
+
+    def test_contains_html_structure(self):
+        """Should contain basic HTML structure."""
+        df = pd.DataFrame({
+            "area": ["A"], "lg_group": ["LG1"], "leader_name": ["L1"],
+            "families": [5], "individuals": [7], "members": [12],
+            "meeting_day": ["Sunday"],
+        })
+        summary = pd.DataFrame({
+            "area": ["A"], "total_groups": [1], "total_families": [5],
+            "total_members": [12], "avg_members": [12.0], "strength": ["Weak"],
+        })
+        kpi = {"num_areas": 1, "total_groups": 1, "total_members": 12,
+               "total_families": 5, "strong_count": 0}
+        result = generate_html_report(df, summary, kpi)
+        assert "<!DOCTYPE html>" in result
+        assert "TKT Kingdom" in result
+        assert "</html>" in result
+
+    def test_includes_kpi_values(self):
+        """Should include KPI values in the report."""
+        df = pd.DataFrame({
+            "area": ["A"], "lg_group": ["LG1"], "leader_name": ["L1"],
+            "families": [5], "individuals": [7], "members": [12],
+            "meeting_day": ["Sunday"],
+        })
+        summary = pd.DataFrame({
+            "area": ["A"], "total_groups": [1], "total_families": [5],
+            "total_members": [12], "avg_members": [12.0], "strength": ["Weak"],
+        })
+        kpi = {"num_areas": 3, "total_groups": 10, "total_members": 99,
+               "total_families": 42, "strong_count": 5}
+        result = generate_html_report(df, summary, kpi)
+        assert "99" in result
+        assert "42" in result
+
+    def test_empty_dataframes(self):
+        """Should handle empty DataFrames without errors."""
+        df = pd.DataFrame(columns=[
+            "area", "lg_group", "leader_name", "families",
+            "individuals", "members", "meeting_day",
+        ])
+        summary = pd.DataFrame(columns=[
+            "area", "total_groups", "total_families",
+            "total_members", "avg_members", "strength",
+        ])
+        kpi = {"num_areas": 0, "total_groups": 0, "total_members": 0,
+               "total_families": 0, "strong_count": 0}
+        result = generate_html_report(df, summary, kpi)
+        assert isinstance(result, str)
+        assert "<!DOCTYPE html>" in result

@@ -12,6 +12,9 @@ from src.charts import (
     members_by_area_chart,
     strength_pie_chart,
     top_bottom_groups_chart,
+    get_layout,
+    DARK_LAYOUT,
+    LIGHT_LAYOUT,
 )
 from src.data_loader import assign_strength
 
@@ -22,12 +25,33 @@ def sample_df_with_strength(sample_df):
     return assign_strength(sample_df)
 
 
+class TestGetLayout:
+    """Tests for get_layout helper."""
+
+    def test_dark_returns_dark_layout(self):
+        """get_layout(dark=True) should return DARK_LAYOUT."""
+        assert get_layout(dark=True) is DARK_LAYOUT
+
+    def test_light_returns_light_layout(self):
+        """get_layout(dark=False) should return LIGHT_LAYOUT."""
+        assert get_layout(dark=False) is LIGHT_LAYOUT
+
+    def test_default_is_dark(self):
+        """Default call should return DARK_LAYOUT."""
+        assert get_layout() is DARK_LAYOUT
+
+
 class TestMembersByAreaChart:
     """Tests for members_by_area_chart."""
 
     def test_members_by_area_chart_returns_figure(self, sample_df):
         """Should return a plotly go.Figure."""
         fig = members_by_area_chart(sample_df)
+        assert isinstance(fig, go.Figure)
+
+    def test_members_by_area_chart_light_mode(self, sample_df):
+        """Should return a valid figure in light mode."""
+        fig = members_by_area_chart(sample_df, dark=False)
         assert isinstance(fig, go.Figure)
 
 
@@ -39,6 +63,11 @@ class TestGroupsByAreaChart:
         fig = groups_by_area_chart(sample_df)
         assert isinstance(fig, go.Figure)
 
+    def test_groups_by_area_chart_light_mode(self, sample_df):
+        """Should return a valid figure in light mode."""
+        fig = groups_by_area_chart(sample_df, dark=False)
+        assert isinstance(fig, go.Figure)
+
 
 class TestStrengthPieChart:
     """Tests for strength_pie_chart."""
@@ -46,6 +75,11 @@ class TestStrengthPieChart:
     def test_strength_pie_chart_returns_figure(self, sample_df_with_strength):
         """Should return a plotly go.Figure when strength column is present."""
         fig = strength_pie_chart(sample_df_with_strength)
+        assert isinstance(fig, go.Figure)
+
+    def test_strength_pie_chart_light_mode(self, sample_df_with_strength):
+        """Should return a valid figure in light mode."""
+        fig = strength_pie_chart(sample_df_with_strength, dark=False)
         assert isinstance(fig, go.Figure)
 
 
@@ -57,6 +91,11 @@ class TestMeetingDayChart:
         fig = meeting_day_chart(sample_df)
         assert isinstance(fig, go.Figure)
 
+    def test_meeting_day_chart_light_mode(self, sample_df):
+        """Should return a valid figure in light mode."""
+        fig = meeting_day_chart(sample_df, dark=False)
+        assert isinstance(fig, go.Figure)
+
 
 class TestTopBottomGroupsChart:
     """Tests for top_bottom_groups_chart."""
@@ -66,6 +105,11 @@ class TestTopBottomGroupsChart:
         fig = top_bottom_groups_chart(sample_df)
         assert isinstance(fig, go.Figure)
 
+    def test_top_bottom_groups_chart_light_mode(self, sample_df):
+        """Should return a valid figure in light mode."""
+        fig = top_bottom_groups_chart(sample_df, dark=False)
+        assert isinstance(fig, go.Figure)
+
 
 class TestLeaderMembersChart:
     """Tests for leader_members_chart."""
@@ -73,6 +117,11 @@ class TestLeaderMembersChart:
     def test_leader_members_chart_returns_figure(self, sample_df):
         """Should return a plotly go.Figure."""
         fig = leader_members_chart(sample_df)
+        assert isinstance(fig, go.Figure)
+
+    def test_leader_members_chart_light_mode(self, sample_df):
+        """Should return a valid figure in light mode."""
+        fig = leader_members_chart(sample_df, dark=False)
         assert isinstance(fig, go.Figure)
 
 
