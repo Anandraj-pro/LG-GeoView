@@ -1,5 +1,7 @@
 """Map visualization module using Folium with legal free tile providers."""
 
+from __future__ import annotations
+
 import os
 import time
 from html import escape as html_escape
@@ -15,12 +17,12 @@ logger = get_logger(__name__)
 
 # Map bounds based on Nehru ORR (Outer Ring Road) west sector
 # Tighter bounds to prevent showing Dundigal on mobile
-ORR_BOUNDS = [[17.4200, 78.2800], [17.5300, 78.4850]]
-HYDERABAD_CENTER = [17.4750, 78.3825]
-DEFAULT_ZOOM = 12
+ORR_BOUNDS: list[list[float]] = [[17.4200, 78.2800], [17.5300, 78.4850]]
+HYDERABAD_CENTER: list[float] = [17.4750, 78.3825]
+DEFAULT_ZOOM: int = 12
 
 
-def _compute_map_bounds():
+def _compute_map_bounds() -> tuple[list[float], list[list[float]]]:
     """Return fixed ORR-based bounds for the ministry area.
 
     Uses hard-coded Nehru ORR bounds instead of auto-calculating
@@ -30,7 +32,7 @@ def _compute_map_bounds():
     return HYDERABAD_CENTER, ORR_BOUNDS
 
 
-def _apply_fixed_bounds(m, bounds):
+def _apply_fixed_bounds(m: folium.Map, bounds: list[list[float]] | None) -> None:
     """Lock map strictly to ORR bounds.
 
     Uses fit_bounds with zero padding to frame exactly,
@@ -48,8 +50,8 @@ def _apply_fixed_bounds(m, bounds):
     m.options["maxZoom"] = 18
 
 
-# 32 distinct colors — one per care group, no repeats
-GROUP_COLORS = [
+# 32 distinct colors -- one per care group, no repeats
+GROUP_COLORS: list[str] = [
     "#e6194b", "#3cb44b", "#4363d8", "#f58231", "#911eb4",
     "#42d4f4", "#f032e6", "#bfef45", "#fabed4", "#469990",
     "#dcbeff", "#9A6324", "#fffac8", "#800000", "#aaffc3",
@@ -59,8 +61,8 @@ GROUP_COLORS = [
     "#f39c12", "#d35400",
 ]
 
-# Map tile options — legal free tile providers
-MAP_STYLES = {
+# Map tile options -- legal free tile providers
+MAP_STYLES: dict[str, dict[str, str | None]] = {
     "OpenStreetMap": {
         "tiles": "OpenStreetMap",
         "attr": None,
@@ -90,22 +92,25 @@ MAP_STYLES = {
 
 
 # --- Strength colors for Kingdom map ---
-STRENGTH_GLOW = {
+STRENGTH_GLOW: dict[str, dict[str, str]] = {
     "Strong": {"fill": "#D4AF37", "border": "#FFD700", "glow": "rgba(212,175,55,0.45)"},
     "Medium": {"fill": "#C0A060", "border": "#DAA520", "glow": "rgba(192,160,96,0.30)"},
     "Weak":   {"fill": "#8B6914", "border": "#A0822A", "glow": "rgba(139,105,20,0.20)"},
 }
 
 
-def build_kingdom_map(df: pd.DataFrame, summary_df: pd.DataFrame,
-                      map_style: str = None) -> folium.Map:
-    """Build the King's Kingdom map — dark terrain with golden territory markers."""
+def build_kingdom_map(
+    df: pd.DataFrame,
+    summary_df: pd.DataFrame,
+    map_style: str | None = None,
+) -> folium.Map:
+    """Build the King's Kingdom map -- dark terrain with golden territory markers."""
     t0 = time.perf_counter()
     logger.info("Building King's Kingdom map with %d markers", len(df))
 
     center, bounds = _compute_map_bounds()
 
-    # Light muted tile — readable background with regal markers
+    # Light muted tile -- readable background with regal markers
     m = folium.Map(
         location=center,
         zoom_start=DEFAULT_ZOOM,
@@ -125,7 +130,7 @@ def build_kingdom_map(df: pd.DataFrame, summary_df: pd.DataFrame,
         total_members = int(area_row["total_members"])
         total_groups = int(area_row["total_groups"])
 
-        # Outer glow — territory reach
+        # Outer glow -- territory reach
         reach_radius = max(600, total_members * 25)
         folium.Circle(
             location=[area_row["latitude"], area_row["longitude"]],
@@ -288,7 +293,7 @@ def build_kingdom_map(df: pd.DataFrame, summary_df: pd.DataFrame,
     return m
 
 
-def _add_kingdom_legend(m: folium.Map, summary_df: pd.DataFrame):
+def _add_kingdom_legend(m: folium.Map, summary_df: pd.DataFrame) -> None:
     """Add a regal legend to the Kingdom map."""
     total_areas = len(summary_df)
     total_groups = int(summary_df["total_groups"].sum())
@@ -348,7 +353,7 @@ def _add_kingdom_legend(m: folium.Map, summary_df: pd.DataFrame):
 
 
 # --- Territory Fill Colors ---
-TERRITORY_PALETTE = [
+TERRITORY_PALETTE: list[dict[str, str]] = [
     {"fill": "#4CAF50", "border": "#2E7D32"},    # green
     {"fill": "#2196F3", "border": "#1565C0"},     # blue
     {"fill": "#F44336", "border": "#C62828"},     # red
@@ -369,27 +374,27 @@ TERRITORY_PALETTE = [
     {"fill": "#FFEB3B", "border": "#F57F17"},     # yellow
 ]
 
-UNOCCUPIED_COLOR = {"fill": "#9E9E9E", "border": "#757575"}
+UNOCCUPIED_COLOR: dict[str, str] = {"fill": "#9E9E9E", "border": "#757575"}
 
-KUKATPALLY_CENTER = [17.4948, 78.3996]
-KUKATPALLY_RADIUS = 3  # km
+KUKATPALLY_CENTER: list[float] = [17.4948, 78.3996]
+KUKATPALLY_RADIUS: int = 3  # km
 
 
-def _convex_hull(points):
+def _convex_hull(points: list[tuple[float, float]]) -> list[tuple[float, float]]:
     """Compute convex hull using Andrew's monotone chain algorithm."""
     pts = sorted(set(points))
     if len(pts) <= 1:
         return pts
 
     # Build lower hull
-    lower = []
+    lower: list[tuple[float, float]] = []
     for p in pts:
         while len(lower) >= 2 and _cross(lower[-2], lower[-1], p) <= 0:
             lower.pop()
         lower.append(p)
 
     # Build upper hull
-    upper = []
+    upper: list[tuple[float, float]] = []
     for p in reversed(pts):
         while len(upper) >= 2 and _cross(upper[-2], upper[-1], p) <= 0:
             upper.pop()
@@ -398,12 +403,20 @@ def _convex_hull(points):
     return lower[:-1] + upper[:-1]
 
 
-def _cross(o, a, b):
+def _cross(
+    o: tuple[float, float],
+    a: tuple[float, float],
+    b: tuple[float, float],
+) -> float:
     """2D cross product of vectors OA and OB."""
     return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
 
 
-def _compute_voronoi_boundaries(centers, bbox, grid_size=60):
+def _compute_voronoi_boundaries(
+    centers: list[tuple[float, float] | list[float]],
+    bbox: tuple[float, float, float, float],
+    grid_size: int = 60,
+) -> dict[int, list[list[float]]]:
     """Compute Voronoi-like polygon boundaries for each center point.
 
     Returns dict: center_index -> list of (lat, lng) boundary points.
@@ -413,9 +426,9 @@ def _compute_voronoi_boundaries(centers, bbox, grid_size=60):
     lng_step = (lng_max - lng_min) / grid_size
 
     # Build assignment grid
-    grid = []
+    grid: list[list[int]] = []
     for row in range(grid_size):
-        grid_row = []
+        grid_row: list[int] = []
         for col in range(grid_size):
             mid_lat = lat_min + (row + 0.5) * lat_step
             mid_lng = lng_min + (col + 0.5) * lng_step
@@ -431,7 +444,7 @@ def _compute_voronoi_boundaries(centers, bbox, grid_size=60):
         grid.append(grid_row)
 
     # For each center, collect all grid cell corner points
-    cell_points = {i: [] for i in range(len(centers))}
+    cell_points: dict[int, list[tuple[float, float]]] = {i: [] for i in range(len(centers))}
     for row in range(grid_size):
         for col in range(grid_size):
             idx = grid[row][col]
@@ -444,7 +457,7 @@ def _compute_voronoi_boundaries(centers, bbox, grid_size=60):
             cell_points[idx].append((lat0, lng0 + lng_step))
 
     # Compute convex hull for each center's region
-    boundaries = {}
+    boundaries: dict[int, list[list[float]]] = {}
     for idx, pts in cell_points.items():
         if pts:
             hull = _convex_hull(pts)
@@ -453,7 +466,7 @@ def _compute_voronoi_boundaries(centers, bbox, grid_size=60):
     return boundaries
 
 
-def _load_ward_data():
+def _load_ward_data() -> tuple[dict, dict]:
     """Load ward boundary polygons and area-to-ward mapping."""
     import json as _json
     base = os.path.dirname(os.path.dirname(__file__))
@@ -470,9 +483,12 @@ def _load_ward_data():
         return {}, {}
 
 
-def build_territory_map(df: pd.DataFrame, summary_df: pd.DataFrame,
-                        center_area: str = "Kukatpally",
-                        radius: float = KUKATPALLY_RADIUS) -> folium.Map:
+def build_territory_map(
+    df: pd.DataFrame,
+    summary_df: pd.DataFrame,
+    center_area: str = "Kukatpally",
+    radius: float = KUKATPALLY_RADIUS,
+) -> folium.Map:
     """Build a territory map with colored polygon boundaries for each area."""
     t0 = time.perf_counter()
     logger.info("Building territory map centered on %s", center_area)
@@ -483,7 +499,7 @@ def build_territory_map(df: pd.DataFrame, summary_df: pd.DataFrame,
     center_coords = AREA_COORDINATES.get(center_key, KUKATPALLY_CENTER)
 
     # Find nearby area coordinates using Haversine distance
-    nearby = {}
+    nearby: dict[str, tuple[float, float] | list[float]] = {}
     for area_name, coords in AREA_COORDINATES.items():
         dist = haversine_km(
             center_coords[0], center_coords[1], coords[0], coords[1])
@@ -525,7 +541,7 @@ def build_territory_map(df: pd.DataFrame, summary_df: pd.DataFrame,
     )
 
     # Assign colors
-    area_color_map = {}
+    area_color_map: dict[str, dict[str, str]] = {}
     color_idx = 0
     for name in area_names:
         if name in occupied_areas:
@@ -540,7 +556,7 @@ def build_territory_map(df: pd.DataFrame, summary_df: pd.DataFrame,
     boundaries = _compute_voronoi_boundaries(centers, bbox)
 
     # Summary lookup
-    summary_lookup = {}
+    summary_lookup: dict[str, pd.Series] = {}
     for _, srow in summary_df.iterrows():
         summary_lookup[srow["area"].lower().strip()] = srow
 
@@ -579,7 +595,7 @@ def build_territory_map(df: pd.DataFrame, summary_df: pd.DataFrame,
                 f' \u2014 expansion opportunity</span></div>'
             )
 
-        # The territory polygon — colored fill + bold border
+        # The territory polygon -- colored fill + bold border
         folium.Polygon(
             locations=boundary,
             color=colors["border"],
@@ -678,8 +694,14 @@ def build_territory_map(df: pd.DataFrame, summary_df: pd.DataFrame,
     return m
 
 
-def _add_territory_legend(m, area_color_map, area_names,
-                          summary_lookup, occupied_areas, center_area):
+def _add_territory_legend(
+    m: folium.Map,
+    area_color_map: dict[str, dict[str, str]],
+    area_names: list[str],
+    summary_lookup: dict[str, pd.Series],
+    occupied_areas: set[str],
+    center_area: str,
+) -> None:
     """Add territory legend."""
     items_html = ""
     for name in sorted(area_names):
@@ -742,7 +764,7 @@ def _add_territory_legend(m, area_color_map, area_names,
 
 
 # --- Strength-based coloring for density view ---
-STRENGTH_TERRITORY = {
+STRENGTH_TERRITORY: dict[str, dict[str, str]] = {
     "Strong": {"fill": "#2E7D32", "border": "#1B5E20"},
     "Medium": {"fill": "#F9A825", "border": "#F57F17"},
     "Weak":   {"fill": "#C62828", "border": "#B71C1C"},
@@ -750,16 +772,17 @@ STRENGTH_TERRITORY = {
 
 
 def build_advanced_territory_map(
-    df, summary_df,
-    center_area="Kukatpally",
-    radius=KUKATPALLY_RADIUS,
-    color_by="area",
-    layers=None,
-):
+    df: pd.DataFrame,
+    summary_df: pd.DataFrame,
+    center_area: str = "Kukatpally",
+    radius: float = KUKATPALLY_RADIUS,
+    color_by: str = "area",
+    layers: dict[str, bool] | None = None,
+) -> folium.Map:
     """Build advanced territory map with real GHMC ward boundaries.
 
     Uses actual administrative polygon shapes from ward_boundaries.json.
-    Layers controlled by `layers` dict from Streamlit checkboxes.
+    Layers controlled by ``layers`` dict from Streamlit checkboxes.
     """
     if layers is None:
         layers = {
@@ -775,7 +798,7 @@ def build_advanced_territory_map(
     center_coords = AREA_COORDINATES.get(center_key, KUKATPALLY_CENTER)
 
     # Find nearby areas using Haversine distance
-    nearby = {}
+    nearby: dict[str, tuple[float, float] | list[float]] = {}
     for area_name, coords in AREA_COORDINATES.items():
         dist = haversine_km(
             center_coords[0], center_coords[1], coords[0], coords[1])
@@ -805,12 +828,12 @@ def build_advanced_territory_map(
     area_names = list(nearby.keys())
     occupied = set(df["area"].str.lower().str.strip().unique())
 
-    slookup = {}
+    slookup: dict[str, pd.Series] = {}
     for _, srow in summary_df.iterrows():
         slookup[srow["area"].lower().strip()] = srow
 
     # Find which wards are relevant (used by nearby areas)
-    ward_to_areas = {}
+    ward_to_areas: dict[str, list[str]] = {}
     for area_name in area_names:
         ward = area_ward_map.get(area_name)
         if ward:
@@ -819,7 +842,7 @@ def build_advanced_territory_map(
             ward_to_areas[ward].append(area_name)
 
     # Assign colors per ward
-    ward_color_map = {}
+    ward_color_map: dict[str, dict[str, str]] = {}
     cidx = 0
     for ward_name in ward_to_areas:
         areas_in_ward = ward_to_areas[ward_name]
@@ -831,7 +854,7 @@ def build_advanced_territory_map(
 
         if color_by == "strength":
             # Use the dominant strength of areas in this ward
-            strengths = []
+            strengths: list[str] = []
             for a in areas_in_ward:
                 sr = slookup.get(a)
                 if sr is not None:
@@ -878,7 +901,7 @@ def build_advanced_territory_map(
         # Aggregate stats for this ward
         total_grp = 0
         total_mem = 0
-        area_list = []
+        area_list: list[str] = []
         for a in ward_areas:
             sr = slookup.get(a)
             if sr is not None:
@@ -943,7 +966,7 @@ def build_advanced_territory_map(
         ).add_to(t_layer)
 
     # Build area -> color lookup from ward colors
-    area_color_map = {}
+    area_color_map: dict[str, dict[str, str]] = {}
     for area_name in area_names:
         ward = area_ward_map.get(area_name)
         if ward and ward in ward_color_map:
@@ -1075,7 +1098,7 @@ def build_advanced_territory_map(
                     icon_size=(130, 60), icon_anchor=(65, 30)),
             ).add_to(m)
 
-    # No Folium LayerControl — layers controlled via Streamlit UI
+    # No Folium LayerControl -- layers controlled via Streamlit UI
 
     # Mobile-responsive styles for map UI elements
     mobile_css = """
@@ -1103,18 +1126,24 @@ def build_advanced_territory_map(
     """
     m.get_root().html.add_child(folium.Element(mobile_css))
 
-    # Legend removed — shown as KPIs in Streamlit UI instead
+    # Legend removed -- shown as KPIs in Streamlit UI instead
 
     elapsed = time.perf_counter() - t0
     logger.info("Advanced territory map built in %.3fs", elapsed)
     return m
 
 
-def _add_advanced_legend(m, color_by, area_names, occupied, center_area):
+def _add_advanced_legend(
+    m: folium.Map,
+    color_by: str,
+    area_names: list[str],
+    occupied: set[str],
+    center_area: str,
+) -> None:
     """Legend for advanced territory map."""
     occ = sum(1 for n in area_names if n in occupied)
     total = len(area_names)
-    gap = total - occ
+    gap = total - occ  # noqa: F841
     esc_center = html_escape(center_area.title())
 
     if color_by == "strength":
@@ -1177,7 +1206,7 @@ def _add_advanced_legend(m, color_by, area_names, occupied, center_area):
                       height:12px;background:#9E9E9E;
                       border-radius:2px;"></span>
                 <span style="font-size:11px;">
-                    Unoccupied ({gap})</span></div></div>
+                    Unoccupied</span></div></div>
         <div style="font-size:10px;color:#888;margin-top:6px;
              text-align:center;">
             {occ}/{total} territories occupied</div>
@@ -1186,9 +1215,9 @@ def _add_advanced_legend(m, color_by, area_names, occupied, center_area):
     m.get_root().html.add_child(folium.Element(legend_html))
 
 
-def generate_territory_kml(df, summary_df):
+def generate_territory_kml(df: pd.DataFrame, summary_df: pd.DataFrame) -> str:
     """Generate KML string for territory data export."""
-    lines = [
+    lines: list[str] = [
         '<?xml version="1.0" encoding="UTF-8"?>',
         '<kml xmlns="http://www.opengis.net/kml/2.2">',
         '<Document>',

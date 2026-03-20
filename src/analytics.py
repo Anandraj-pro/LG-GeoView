@@ -7,7 +7,7 @@ import math
 import pandas as pd
 
 
-def haversine_km(lat1, lon1, lat2, lon2):
+def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Calculate great-circle distance between two points in km."""
     R = 6371  # Earth radius in km
     dlat = math.radians(lat2 - lat1)
@@ -21,9 +21,9 @@ def haversine_km(lat1, lon1, lat2, lon2):
 def compute_territory_coverage(
     focus_area: str,
     radius_km: int,
-    area_coordinates: dict,
-    occupied_areas: set,
-) -> dict:
+    area_coordinates: dict[str, tuple[float, float]],
+    occupied_areas: set[str],
+) -> dict[str, set[str] | int | list[str]]:
     """Compute which areas are within radius and which are uncovered.
 
     Parameters
@@ -66,7 +66,7 @@ def compute_territory_coverage(
     }
 
 
-def compute_kpi_metrics(df: pd.DataFrame) -> dict:
+def compute_kpi_metrics(df: pd.DataFrame) -> dict[str, int | float]:
     """Compute all KPI values from a filtered dataframe.
 
     Parameters
@@ -101,7 +101,7 @@ def compute_kpi_metrics(df: pd.DataFrame) -> dict:
     }
 
 
-def generate_html_report(df: pd.DataFrame, summary_df: pd.DataFrame, kpi: dict) -> str:
+def generate_html_report(df: pd.DataFrame, summary_df: pd.DataFrame, kpi: dict[str, int | float]) -> str:
     """Generate a printable HTML report.
 
     Parameters
@@ -144,7 +144,7 @@ def generate_html_report(df: pd.DataFrame, summary_df: pd.DataFrame, kpi: dict) 
         detail_rows += "</tr>"
 
     detail_headers = ""
-    col_labels = {
+    col_labels: dict[str, str] = {
         "area": "Area",
         "lg_group": "Care Group",
         "leader_name": "Leader",

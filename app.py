@@ -25,6 +25,7 @@ from src.charts import (  # noqa: F401
 from src.analytics import (
     compute_kpi_metrics, compute_territory_coverage, generate_html_report,
 )
+from src.components import hero_banner_html, section_header_html, footer_html
 
 # --- Page Config ---
 st.set_page_config(
@@ -105,761 +106,10 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# --- Custom Styling ---
-st.markdown("""
-<style>
-    :root {
-        --bg: #0a0a0f;
-        --bg-secondary: #111118;
-        --bg-card: rgba(18,18,28,0.9);
-        --text: #e0ddd5;
-        --text-muted: #8a8578;
-        --text-heading: #D4AF37;
-        --accent: #D4AF37;
-        --accent-dim: rgba(212,175,55,0.25);
-        --border: rgba(212,175,55,0.15);
-        --sidebar-bg: linear-gradient(180deg, #0e0e16 0%, #121220 100%);
-        --scripture-bg: rgba(212,175,55,0.04);
-        --section-bg: rgba(18,18,28,0.6);
-    }
-
-    .light-mode {
-        --bg: #FFFBF0;
-        --bg-secondary: #F5EDD8;
-        --bg-card: rgba(255,251,240,0.9);
-        --text: #5D4E37;
-        --text-muted: #7A6B50;
-        --text-heading: #8B6914;
-        --accent: #D4AF37;
-        --accent-dim: rgba(212,175,55,0.15);
-        --border: rgba(212,175,55,0.25);
-        --sidebar-bg: linear-gradient(180deg, #FAF5E8 0%, #F5EDD8 100%);
-        --scripture-bg: rgba(212,175,55,0.05);
-        --section-bg: rgba(245,237,216,0.6);
-    }
-
-    .stApp {
-        background: var(--bg) !important;
-        color: var(--text) !important;
-    }
-    .stApp > header { background-color: transparent; }
-
-    /* Glassmorphism Sidebar */
-    [data-testid="stSidebar"] {
-        background: rgba(14,14,22,0.75) !important;
-        backdrop-filter: blur(16px) !important;
-        -webkit-backdrop-filter: blur(16px) !important;
-        border-right: 1px solid rgba(255,255,255,0.06) !important;
-        box-shadow: 4px 0 24px rgba(0,0,0,0.3) !important;
-    }
-    [data-testid="stSidebar"]::before {
-        content: '';
-        position: absolute;
-        top: -50%; left: -50%;
-        width: 200%; height: 200%;
-        background: radial-gradient(circle at 20% 30%,
-                    rgba(99,102,241,0.08) 0%, transparent 50%),
-                    radial-gradient(circle at 80% 70%,
-                    rgba(212,175,55,0.06) 0%, transparent 50%);
-        pointer-events: none;
-        z-index: -1;
-    }
-    [data-testid="stSidebar"] h1,
-    [data-testid="stSidebar"] h2,
-    [data-testid="stSidebar"] h3 {
-        font-family: 'Cinzel', serif !important;
-        color: var(--text-heading) !important;
-    }
-    [data-testid="stSidebar"] p,
-    [data-testid="stSidebar"] span,
-    [data-testid="stSidebar"] label {
-        color: var(--text-muted) !important;
-    }
-    /* Glass effect on sidebar widgets */
-    [data-testid="stSidebar"] [data-testid="stExpander"] {
-        background: rgba(255,255,255,0.03) !important;
-        border: 1px solid rgba(255,255,255,0.06) !important;
-        border-radius: 10px !important;
-        backdrop-filter: blur(8px) !important;
-    }
-    [data-testid="stSidebar"] .stSelectbox,
-    [data-testid="stSidebar"] .stSlider,
-    [data-testid="stSidebar"] .stMultiSelect {
-        background: rgba(255,255,255,0.02) !important;
-        border-radius: 8px !important;
-    }
-
-    /* Main headings */
-    h1, h2, h3 {
-        font-family: 'Cinzel', serif !important;
-        color: var(--text-heading) !important;
-        letter-spacing: 1px;
-    }
-    p, span, label, .stMarkdown, .stCaption {
-        font-family: 'Cormorant Garamond', 'Palatino Linotype', serif !important;
-        color: var(--text) !important;
-    }
-
-    /* Divider lines */
-    hr {
-        border-color: var(--border) !important;
-    }
-
-    /* Tabs */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background: var(--bg-secondary) !important;
-        border-radius: 8px;
-        padding: 4px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        font-family: 'Cinzel', serif !important;
-        letter-spacing: 1px;
-        color: var(--text-muted) !important;
-    }
-    .stTabs [aria-selected="true"] {
-        color: var(--accent) !important;
-    }
-
-    /* Tables */
-    [data-testid="stDataFrame"] {
-        border: 1px solid var(--border) !important;
-        border-radius: 8px;
-    }
-
-    /* Buttons */
-    .stDownloadButton button {
-        background: linear-gradient(135deg, #D4AF37 0%, #B8960C 100%) !important;
-        color: white !important;
-        border: none !important;
-        font-family: 'Cinzel', serif !important;
-        letter-spacing: 1px;
-    }
-
-    /* Selectbox / Slider / Radio styling */
-    [data-testid="stSelectbox"] label,
-    [data-testid="stSlider"] label,
-    [data-testid="stRadio"] label,
-    [data-testid="stMultiSelect"] label {
-        color: var(--text) !important;
-    }
-
-    /* Metrics */
-    [data-testid="stMetricValue"] {
-        color: var(--accent) !important;
-    }
-    [data-testid="stMetricLabel"] {
-        color: var(--text-muted) !important;
-    }
-
-    /* Section backgrounds */
-    .kingdom-section-header {
-        background: var(--section-bg);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 16px 20px;
-        margin-top: 16px;
-    }
-    .kingdom-section-title {
-        font-family: 'Cinzel', serif;
-        color: var(--text-heading);
-        font-size: 14px;
-        letter-spacing: 2px;
-        text-transform: uppercase;
-        text-align: center;
-    }
-    .kingdom-section-verse {
-        font-family: 'Cormorant Garamond', serif;
-        font-size: 0.85rem;
-        color: var(--text-muted);
-        font-style: italic;
-        text-align: center;
-        margin-top: 4px;
-    }
-
-    /* --- Focus-visible for keyboard navigation (Task 5) --- */
-    *:focus-visible {
-        outline: 2px solid #D4AF37 !important;
-        outline-offset: 2px !important;
-    }
-
-    /* --- Hero Banner with Animated Shapes --- */
-    @keyframes float1 {
-        0%, 100% { transform: translateY(0) rotate(12deg); }
-        50% { transform: translateY(-18px) rotate(14deg); }
-    }
-    @keyframes float2 {
-        0%, 100% { transform: translateY(0) rotate(-15deg); }
-        50% { transform: translateY(15px) rotate(-13deg); }
-    }
-    @keyframes float3 {
-        0%, 100% { transform: translateY(0) rotate(-8deg); }
-        50% { transform: translateY(-12px) rotate(-6deg); }
-    }
-    @keyframes float4 {
-        0%, 100% { transform: translateY(0) rotate(20deg); }
-        50% { transform: translateY(10px) rotate(22deg); }
-    }
-    @keyframes fadeUp {
-        from { opacity: 0; transform: translateY(30px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-
-    .hero-banner {
-        position: relative;
-        background: #0a0a0a;
-        border-radius: 16px;
-        padding: 48px 32px 36px;
-        margin-bottom: 24px;
-        overflow: hidden;
-        min-height: 340px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-    }
-    .hero-banner::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background: radial-gradient(ellipse at 30% 20%,
-                    rgba(139,92,246,0.06) 0%, transparent 50%),
-                    radial-gradient(ellipse at 70% 80%,
-                    rgba(212,175,55,0.06) 0%, transparent 50%);
-        pointer-events: none;
-    }
-    .hero-banner::after {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(to top,
-                    #0a0a0a 0%, transparent 30%, transparent 70%, rgba(10,10,10,0.8) 100%);
-        pointer-events: none;
-        z-index: 1;
-    }
-
-    /* Floating elegant shapes */
-    .hero-shape {
-        position: absolute;
-        border-radius: 50%;
-        border: 2px solid rgba(255,255,255,0.08);
-        backdrop-filter: blur(2px);
-        box-shadow: 0 8px 32px rgba(255,255,255,0.05);
-        pointer-events: none;
-    }
-    .hero-shape::after {
-        content: '';
-        position: absolute;
-        inset: 0;
-        border-radius: 50%;
-        background: radial-gradient(circle at 50% 50%,
-                    rgba(255,255,255,0.12), transparent 70%);
-    }
-    .hero-shape-1 {
-        width: 500px; height: 120px;
-        left: -8%; top: 18%;
-        background: linear-gradient(to right, rgba(212,175,55,0.12), transparent);
-        animation: float1 12s ease-in-out infinite;
-    }
-    .hero-shape-2 {
-        width: 400px; height: 100px;
-        right: -3%; top: 72%;
-        background: linear-gradient(to right, rgba(139,92,246,0.10), transparent);
-        animation: float2 14s ease-in-out infinite;
-    }
-    .hero-shape-3 {
-        width: 250px; height: 70px;
-        left: 8%; bottom: 8%;
-        background: linear-gradient(to right, rgba(212,175,55,0.08), transparent);
-        animation: float3 10s ease-in-out infinite;
-    }
-    .hero-shape-4 {
-        width: 180px; height: 50px;
-        right: 18%; top: 10%;
-        background: linear-gradient(to right, rgba(244,114,182,0.08), transparent);
-        animation: float4 11s ease-in-out infinite;
-    }
-
-    .hero-content {
-        position: relative;
-        z-index: 2;
-        text-align: center;
-        max-width: 700px;
-        margin: 0 auto;
-    }
-
-    .hero-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 5px 16px;
-        border-radius: 50px;
-        background: rgba(10,10,20,0.8);
-        border: none;
-        margin-bottom: 20px;
-        animation: fadeUp 1s ease-out 0.3s both;
-        position: relative;
-        overflow: hidden;
-        isolation: isolate;
-    }
-    .hero-badge::before {
-        content: '';
-        position: absolute;
-        top: -50%; left: -50%;
-        width: 200%; height: 200%;
-        background: conic-gradient(
-            from 0deg,
-            transparent 0deg, transparent 120deg,
-            rgba(212,175,55,0.5) 180deg,
-            transparent 240deg, transparent 360deg
-        );
-        animation: moveBorder 3s linear infinite;
-        z-index: -2;
-    }
-    .hero-badge::after {
-        content: '';
-        position: absolute;
-        inset: 1.5px;
-        border-radius: 50px;
-        background: rgba(10,10,20,0.9);
-        z-index: -1;
-    }
-    .hero-badge-dot {
-        width: 8px; height: 8px;
-        border-radius: 50%;
-        background: #D4AF37;
-    }
-    .hero-badge-text {
-        font-family: 'Cormorant Garamond', serif !important;
-        font-size: 0.85rem;
-        color: rgba(255,255,255,0.65);
-        letter-spacing: 2px;
-    }
-
-    @keyframes shimmer {
-        0% { background-position: 100% center; }
-        100% { background-position: 0% center; }
-    }
-
-    .hero-title-line1 {
-        font-family: 'Cinzel', serif;
-        font-size: 3rem;
-        font-weight: 900;
-        letter-spacing: 5px;
-        text-transform: uppercase;
-        background: linear-gradient(to bottom, #ffffff, rgba(255,255,255,0.8));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        margin: 0;
-        line-height: 1.2;
-        animation: fadeUp 1s ease-out 0.5s both;
-    }
-    .hero-title-line2 {
-        font-family: 'Cinzel', serif;
-        font-size: 2.2rem;
-        font-weight: 700;
-        letter-spacing: 3px;
-        background: linear-gradient(90deg,
-            #D4AF37 0%, #D4AF37 40%,
-            #FFFFFF 50%,
-            #D4AF37 60%, #D4AF37 100%);
-        background-size: 250% 100%;
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        margin: 4px 0 0;
-        line-height: 1.3;
-        animation: fadeUp 1s ease-out 0.7s both, shimmer 3s linear infinite;
-    }
-
-    .hero-scripture {
-        font-family: 'Cormorant Garamond', serif !important;
-        font-size: 0.95rem;
-        color: rgba(255,255,255,0.55);
-        font-style: italic;
-        margin-top: 18px;
-        line-height: 1.6;
-        max-width: 480px;
-        margin-left: auto;
-        margin-right: auto;
-        animation: fadeUp 1s ease-out 0.9s both;
-    }
-
-    /* Moving border animation */
-    @keyframes moveBorder {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-
-    /* Hero KPI row inside banner */
-    .hero-kpis {
-        position: relative;
-        z-index: 2;
-        display: flex;
-        justify-content: center;
-        gap: 18px;
-        margin-top: 28px;
-        flex-wrap: wrap;
-        animation: fadeUp 1s ease-out 1.1s both;
-    }
-    .hero-kpi {
-        text-align: center;
-        padding: 14px 22px;
-        min-width: 115px;
-        border-radius: 14px;
-        background: rgba(15,15,25,0.8);
-        border: 1px solid rgba(255,255,255,0.08);
-        backdrop-filter: blur(12px);
-        position: relative;
-        overflow: hidden;
-        isolation: isolate;
-    }
-    .hero-kpi::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: conic-gradient(
-            from 0deg,
-            transparent 0deg,
-            transparent 60deg,
-            rgba(212,175,55,0.4) 80deg,
-            rgba(139,92,246,0.3) 120deg,
-            transparent 150deg,
-            transparent 300deg,
-            rgba(212,175,55,0.3) 330deg,
-            transparent 360deg
-        );
-        animation: moveBorder 4s linear infinite;
-        z-index: -2;
-    }
-    .hero-kpi::after {
-        content: '';
-        position: absolute;
-        inset: 1.5px;
-        border-radius: 13px;
-        background: rgba(10,10,20,0.92);
-        z-index: -1;
-    }
-    .hero-kpi-icon {
-        font-size: 1.1rem;
-        margin-bottom: 2px;
-    }
-    .hero-kpi-value {
-        font-family: 'Cinzel', serif;
-        font-size: 1.6rem;
-        font-weight: 700;
-        color: #D4AF37;
-    }
-    .hero-kpi-label {
-        font-family: 'Cormorant Garamond', serif;
-        font-size: 0.75rem;
-        color: rgba(255,255,255,0.6);
-        letter-spacing: 1.5px;
-        text-transform: uppercase;
-        margin-top: 2px;
-    }
-
-    /* Kingdom section headers */
-    .kingdom-scripture {
-        font-family: 'Cormorant Garamond', serif;
-        font-size: 1.05rem;
-        color: var(--text-muted);
-        text-align: center;
-        font-style: italic;
-        padding: 16px 40px;
-        margin: 16px 0;
-        border-left: 2px solid var(--border);
-        border-right: 2px solid var(--border);
-        background: linear-gradient(90deg,
-                    var(--scripture-bg), transparent, var(--scripture-bg));
-    }
-
-    /* --- Tablet (481px - 768px) --- */
-    @media screen and (max-width: 768px) {
-        .main .block-container {
-            padding: 1rem 1rem !important;
-        }
-        .hero-banner {
-            padding: 28px 16px 24px;
-            min-height: 260px;
-            border-radius: 12px;
-            margin-bottom: 16px;
-        }
-        .hero-title-line1 { font-size: 1.8rem; letter-spacing: 3px; }
-        .hero-title-line2 { font-size: 1.3rem; letter-spacing: 2px; }
-        .hero-scripture { font-size: 0.8rem; padding: 0 12px; }
-        .hero-kpis { gap: 8px; }
-        .hero-kpi { padding: 10px 14px; min-width: 90px; }
-        .hero-kpi-value { font-size: 1.3rem; }
-        .hero-kpi-label { font-size: 0.65rem; }
-        .hero-shape-1, .hero-shape-2 { display: none; }
-        [data-testid="column"] {
-            min-width: 100px !important;
-        }
-        .js-plotly-plot, .plotly, .plot-container {
-            max-height: 300px;
-        }
-        iframe {
-            height: 500px !important;
-        }
-    }
-
-    /* Fix ALL Streamlit icons that render as text on mobile */
-    /* Sidebar open/close buttons */
-    [data-testid="stSidebarCollapseButton"] button,
-    [data-testid="stSidebarNavCollapseButton"] button,
-    [data-testid="collapsedControl"] button,
-    button[kind="headerNoPadding"] {
-        font-size: 0 !important;
-        overflow: hidden !important;
-        width: 36px !important;
-        height: 36px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-    }
-    [data-testid="stSidebarCollapseButton"] button::after,
-    [data-testid="stSidebarNavCollapseButton"] button::after,
-    [data-testid="collapsedControl"] button::after,
-    button[kind="headerNoPadding"]::after {
-        content: "\\2630" !important;
-        font-size: 20px !important;
-        color: var(--text-muted) !important;
-    }
-
-    /* Hide broken Material Icons text everywhere */
-    .material-symbols-rounded,
-    .material-icons,
-    span[data-icon] {
-        font-size: 0 !important;
-        overflow: hidden !important;
-    }
-
-    /* Fix expander arrows showing as text */
-    [data-testid="stExpander"] summary span[data-testid="stMarkdownContainer"] {
-        overflow: hidden !important;
-    }
-    [data-testid="stExpander"] svg {
-        width: 16px !important;
-        height: 16px !important;
-    }
-
-    /* --- Mobile Phone (max 480px) --- */
-    @media screen and (max-width: 480px) {
-        /* Streamlit layout fixes */
-        .main .block-container {
-            padding: 0.5rem 0.5rem !important;
-            max-width: 100% !important;
-        }
-        [data-testid="stSidebar"] {
-            min-width: 260px !important;
-            max-width: 280px !important;
-        }
-        [data-testid="stHorizontalBlock"] {
-            flex-wrap: wrap !important;
-            gap: 4px !important;
-        }
-        [data-testid="column"] {
-            min-width: 45% !important;
-            flex: 1 1 45% !important;
-        }
-
-        /* Expander — fix arrow overlap on mobile */
-        [data-testid="stExpander"] {
-            margin: 4px 0 !important;
-        }
-        [data-testid="stExpander"] details summary {
-            padding: 8px 12px !important;
-            font-size: 0.85rem !important;
-        }
-
-        /* Hero banner — compact */
-        .hero-banner {
-            padding: 20px 12px 18px;
-            min-height: 220px;
-            border-radius: 10px;
-            margin-bottom: 12px;
-        }
-        .hero-badge {
-            padding: 3px 10px;
-            margin-bottom: 12px;
-        }
-        .hero-badge-text { font-size: 0.7rem !important; }
-        .hero-title-line1 {
-            font-size: 1.4rem !important;
-            letter-spacing: 2px !important;
-        }
-        .hero-title-line2 {
-            font-size: 1rem !important;
-            letter-spacing: 1px !important;
-        }
-        .hero-scripture {
-            font-size: 0.72rem !important;
-            padding: 0 4px !important;
-            margin-top: 10px !important;
-            line-height: 1.4 !important;
-        }
-
-        /* KPIs — 3+2 grid on mobile */
-        .hero-kpis {
-            gap: 6px !important;
-            margin-top: 16px !important;
-        }
-        .hero-kpi {
-            padding: 8px 10px !important;
-            min-width: 28% !important;
-            flex: 1 1 28% !important;
-            border-radius: 10px !important;
-        }
-        .hero-kpi-icon { font-size: 0.9rem !important; }
-        .hero-kpi-value { font-size: 1.1rem !important; }
-        .hero-kpi-label {
-            font-size: 0.55rem !important;
-            letter-spacing: 1px !important;
-        }
-
-        /* Hide floating shapes on mobile */
-        .hero-shape { display: none !important; }
-
-        /* Map — fit mobile screen */
-        iframe {
-            height: 380px !important;
-            max-width: 100vw !important;
-        }
-        [data-testid="stIFrame"],
-        .stFolium {
-            max-width: 100% !important;
-            overflow: hidden !important;
-        }
-
-        /* Charts — compact */
-        .js-plotly-plot, .plotly, .plot-container {
-            max-height: 250px !important;
-        }
-
-        /* Section headers — smaller */
-        .kingdom-scripture {
-            padding: 10px 12px !important;
-            font-size: 0.85rem !important;
-        }
-
-        /* Tables — horizontal scroll */
-        [data-testid="stDataFrame"] {
-            overflow-x: auto !important;
-        }
-
-        /* Download buttons — stack */
-        .stDownloadButton {
-            width: 100% !important;
-        }
-        .stDownloadButton button {
-            width: 100% !important;
-            font-size: 0.8rem !important;
-            padding: 8px !important;
-        }
-
-        /* Tabs — smaller text */
-        .stTabs [data-baseweb="tab"] {
-            font-size: 0.75rem !important;
-            letter-spacing: 0.5px !important;
-            padding: 8px 12px !important;
-        }
-
-        /* Footer — compact */
-        .kingdom-footer {
-            padding: 8px 0 !important;
-        }
-    }
-
-    /* --- Very small screens (max 360px) --- */
-    @media screen and (max-width: 360px) {
-        .hero-title-line1 { font-size: 1.2rem !important; }
-        .hero-title-line2 { font-size: 0.85rem !important; }
-        .hero-kpi {
-            min-width: 44% !important;
-            flex: 1 1 44% !important;
-        }
-        .hero-kpi-value { font-size: 1rem !important; }
-    }
-
-    /* --- Print Styles (A4) --- */
-    @media print {
-        @page {
-            size: A4 landscape;
-            margin: 10mm;
-        }
-
-        /* Hide sidebar, header, footer, toolbar */
-        [data-testid="stSidebar"],
-        [data-testid="stHeader"],
-        [data-testid="stToolbar"],
-        [data-testid="stDecoration"],
-        .stDeployButton,
-        footer, header,
-        [data-testid="stStatusWidget"],
-        .stActionButton,
-        button,
-        [data-testid="baseButton-secondary"] {
-            display: none !important;
-        }
-
-        /* Full width content */
-        .main .block-container {
-            max-width: 100% !important;
-            padding: 0 !important;
-            margin: 0 !important;
-        }
-
-        /* Prevent content clipping */
-        html, body, .stApp, [data-testid="stAppViewContainer"],
-        [data-testid="stMain"], [data-testid="stMainBlockContainer"],
-        [data-testid="stVerticalBlock"], [data-testid="stHorizontalBlock"],
-        .element-container, .stMarkdown, [data-testid="column"] {
-            overflow: visible !important;
-            max-height: none !important;
-            height: auto !important;
-            width: 100% !important;
-            max-width: 100% !important;
-        }
-
-        /* Map iframe */
-        iframe {
-            width: 100% !important;
-            max-width: 100% !important;
-            height: 400px !important;
-            page-break-inside: avoid;
-        }
-
-        /* Charts — prevent cutting */
-        .js-plotly-plot, .plotly, .plot-container {
-            width: 100% !important;
-            max-width: 100% !important;
-            page-break-inside: avoid;
-        }
-
-        /* Tables */
-        [data-testid="stDataFrame"] {
-            overflow: visible !important;
-            page-break-inside: avoid;
-        }
-
-        /* Page breaks */
-        .stSubheader, h2, h3 {
-            page-break-after: avoid;
-        }
-
-        /* Preserve chart/marker colors */
-        * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-        }
-    }
-</style>
-""", unsafe_allow_html=True)
+# --- Custom Styling (loaded from external CSS file) ---
+css_path = os.path.join(os.path.dirname(__file__), "assets", "styles.css")
+with open(css_path) as f:
+    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 
 # --- Data Loading ---
@@ -903,6 +153,7 @@ with st.sidebar:
     # Theme toggle
     light_mode = st.toggle("Light Mode", value=False, key="theme_toggle")
 
+    # Dynamic light mode CSS override stays in app.py (conditional)
     if light_mode:
         st.markdown(
             '<style>'
@@ -1070,55 +321,7 @@ if df_filtered.empty:
 
 # --- Kingdom Banner (KPIs via analytics module) ---
 kpi = compute_kpi_metrics(df_filtered)
-
-hero_html = f"""<div class="hero-banner" role="banner" aria-label="TKT Kingdom dashboard hero banner">\
-<div class="hero-shape hero-shape-1"></div>\
-<div class="hero-shape hero-shape-2"></div>\
-<div class="hero-shape hero-shape-3"></div>\
-<div class="hero-shape hero-shape-4"></div>\
-<div class="hero-content">\
-<div class="hero-badge">\
-<div class="hero-badge-dot"></div>\
-<span class="hero-badge-text">West Campus &#183; Hyderabad</span>\
-</div>\
-<div class="hero-title-line1">TKT Kingdom</div>\
-<div class="hero-title-line2">Expanding His Territory</div>\
-<div class="hero-scripture">\
-"The harvest is plentiful, but the workers are few.\
- Ask the Lord of the harvest to send out workers\
- into his harvest field."\
-<br>- Matthew 9:37-38\
-</div>\
-</div>\
-<div class="hero-kpis">\
-<div class="hero-kpi">\
-<div class="hero-kpi-icon">&#x25A0;</div>\
-<div class="hero-kpi-value">{kpi["num_areas"]}</div>\
-<div class="hero-kpi-label">Territories</div>\
-</div>\
-<div class="hero-kpi">\
-<div class="hero-kpi-icon">&#x2666;</div>\
-<div class="hero-kpi-value">{kpi["total_groups"]}</div>\
-<div class="hero-kpi-label">Shepherds</div>\
-</div>\
-<div class="hero-kpi">\
-<div class="hero-kpi-icon">&#x2022;</div>\
-<div class="hero-kpi-value">{kpi["total_members"]}</div>\
-<div class="hero-kpi-label">Souls Gathered</div>\
-</div>\
-<div class="hero-kpi">\
-<div class="hero-kpi-icon">&#x2605;</div>\
-<div class="hero-kpi-value">{kpi["strong_count"]}</div>\
-<div class="hero-kpi-label">Strong Groups</div>\
-</div>\
-<div class="hero-kpi">\
-<div class="hero-kpi-icon">&#x25CB;</div>\
-<div class="hero-kpi-value">{kpi["weak_count"]}</div>\
-<div class="hero-kpi-label">Emerging</div>\
-</div>\
-</div>\
-</div>"""
-st.markdown(hero_html, unsafe_allow_html=True)
+st.markdown(hero_banner_html(kpi), unsafe_allow_html=True)
 
 # Determine chart dark mode based on light_mode toggle
 chart_dark = not light_mode
@@ -1227,20 +430,14 @@ with map_tab2:
     except Exception as e:
         st.error(f"Could not render Kingdom map: {e}")
 
-    st.markdown("""
-    <div style="background: var(--section-bg);
-         padding: 16px 20px; border-radius: 10px; border: 1px solid var(--border);
-         margin-top: 16px;">
-        <div style="font-family: 'Cinzel', serif; color: var(--text-heading); font-size: 14px;
-             letter-spacing: 2px; text-transform: uppercase;
-             text-align: center;">Territory Report</div>
-        <div style="font-family: 'Cormorant Garamond', serif;
-             font-size: 0.85rem; color: var(--text-muted); font-style: italic;
-             text-align: center; margin-top: 4px;">
-            "The Lord your God will bless you in all your harvest"
-            - Deuteronomy 16:15</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        section_header_html(
+            "", "Territory Report",
+            verse="The Lord your God will bless you in all your harvest",
+            reference="Deuteronomy 16:15",
+        ),
+        unsafe_allow_html=True,
+    )
 
     territory_data = kingdom_summary.rename(columns={
         "area": "Territory",
@@ -1259,9 +456,10 @@ with map_tab2:
 
 # --- Area Comparison (Task 4) ---
 st.markdown("---")
-st.markdown("""<div style="font-family: 'Cinzel', serif; font-size: 1.1rem;
-     color: var(--text-heading); letter-spacing: 2px; margin-bottom: 4px;">
-    &#x2666; Area Comparison</div>""", unsafe_allow_html=True)
+st.markdown(
+    section_header_html("&#x2666;", "Area Comparison"),
+    unsafe_allow_html=True,
+)
 
 comp_c1, comp_c2 = st.columns(2)
 area_list = sorted(df_filtered["area"].unique())
@@ -1294,16 +492,14 @@ if area_a and area_b:
 # --- Drill-Down Section ---
 st.markdown("<div style='margin-top: 60px;'></div>", unsafe_allow_html=True)
 st.markdown("---")
-st.markdown("""
-<div style="font-family: 'Cinzel', serif; font-size: 1.1rem;
-     color: var(--text-heading); letter-spacing: 2px; margin-bottom: 4px;">
-    &#x2666; Territory Drill-Down</div>
-<div style="font-family: 'Cormorant Garamond', serif;
-     font-size: 0.85rem; color: var(--text-muted); font-style: italic;
-     margin-bottom: 12px;">
-    "Where two or three gather in my name, there am I with them"
-    - Matthew 18:20</div>
-""", unsafe_allow_html=True)
+st.markdown(
+    section_header_html(
+        "&#x2666;", "Territory Drill-Down",
+        verse="Where two or three gather in my name, there am I with them",
+        reference="Matthew 18:20",
+    ),
+    unsafe_allow_html=True,
+)
 
 # Show "All Areas" by default, with option to filter
 area_options = ["All Areas"] + sorted(df_filtered["area"].unique())
@@ -1333,7 +529,7 @@ with drill_col2:
     m3.metric("Total Members", area_members)
     m4.metric("Avg Members", f"{area_avg:.1f}")
 
-# Detail table — show all groups by default
+# Detail table -- show all groups by default
 all_detail = drill_data[[
     "area", "lg_group", "leader_name", "families", "individuals", "members", "meeting_day", "strength"
 ]].copy()
@@ -1369,16 +565,14 @@ with dl_col2:
 
 # --- Charts ---
 st.markdown("---")
-st.markdown("""
-<div style="font-family: 'Cinzel', serif; font-size: 1.1rem;
-     color: var(--text-heading); letter-spacing: 2px; margin-bottom: 4px;">
-    &#x2666; Kingdom Insights</div>
-<div style="font-family: 'Cormorant Garamond', serif;
-     font-size: 0.85rem; color: var(--text-muted); font-style: italic;
-     margin-bottom: 12px;">
-    "For where your treasure is, there your heart will be also"
-    - Matthew 6:21</div>
-""", unsafe_allow_html=True)
+st.markdown(
+    section_header_html(
+        "&#x2666;", "Kingdom Insights",
+        verse="For where your treasure is, there your heart will be also",
+        reference="Matthew 6:21",
+    ),
+    unsafe_allow_html=True,
+)
 
 chart_col1, chart_col2 = st.columns(2)
 
@@ -1426,16 +620,14 @@ with chart_col6:
 
 # --- Area Summary Table ---
 st.markdown("---")
-st.markdown("""
-<div style="font-family: 'Cinzel', serif; font-size: 1.1rem;
-     color: var(--text-heading); letter-spacing: 2px; margin-bottom: 4px;">
-    &#x2666; Territory Summary</div>
-<div style="font-family: 'Cormorant Garamond', serif;
-     font-size: 0.85rem; color: var(--text-muted); font-style: italic;
-     margin-bottom: 12px;">
-    "The earth is the Lord's, and everything in it"
-    - Psalm 24:1</div>
-""", unsafe_allow_html=True)
+st.markdown(
+    section_header_html(
+        "&#x2666;", "Territory Summary",
+        verse="The earth is the Lord's, and everything in it",
+        reference="Psalm 24:1",
+    ),
+    unsafe_allow_html=True,
+)
 summary_df = get_area_summary(df_filtered)
 st.dataframe(
     summary_df.rename(columns={
@@ -1463,23 +655,4 @@ st.download_button(
 
 # --- Footer ---
 st.markdown("---")
-st.markdown("""
-<div style="text-align: center; padding: 16px 0 8px 0;">
-    <div style="font-family: 'Cormorant Garamond', serif;
-         font-size: 0.9rem; color: var(--text-muted); font-style: italic;
-         max-width: 500px; margin: 0 auto; line-height: 1.5;">
-        "The harvest is plentiful, but the workers are few.
-        Ask the Lord of the harvest to send out workers
-        into his harvest field."
-        <br><span style="font-size: 0.8rem; color: var(--text-muted);">
-        - Matthew 9:37-38</span>
-    </div>
-    <div style="width: 60px; height: 1px;
-         background: linear-gradient(90deg, transparent, #D4AF37, transparent);
-         margin: 12px auto;"></div>
-    <div style="font-family: 'Cinzel', serif;
-         color: var(--text-muted); font-size: 0.75rem; letter-spacing: 2px;">
-        TKT Kingdom v1.2 &#183; West Campus &#183; Hyderabad
-    </div>
-</div>
-""", unsafe_allow_html=True)
+st.markdown(footer_html(), unsafe_allow_html=True)
