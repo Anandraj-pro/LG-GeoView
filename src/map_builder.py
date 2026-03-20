@@ -11,17 +11,15 @@ from src.logger import get_logger
 logger = get_logger(__name__)
 
 # Hyderabad West center
-HYDERABAD_CENTER = [17.480, 78.385]
+HYDERABAD_CENTER = [17.4775, 78.3800]
 DEFAULT_ZOOM = 12
-
-# Padding added around the outermost area coordinates
-BOUNDS_PADDING = 0.015
 
 
 def _compute_map_bounds():
-    """Compute map bounds dynamically from area coordinates.
+    """Compute tight map bounds from area coordinates.
 
-    Auto-expands when new areas are added to area_coordinates.json.
+    Asymmetric padding: tight north (0.005) to avoid showing Dundigal,
+    normal padding elsewhere (0.012). Auto-expands for new areas.
     Returns (center, bounds) where bounds = [[south, west], [north, east]].
     """
     from src.data_loader import AREA_COORDINATES
@@ -31,10 +29,10 @@ def _compute_map_bounds():
     lats = [c[0] for c in AREA_COORDINATES.values()]
     lngs = [c[1] for c in AREA_COORDINATES.values()]
 
-    south = min(lats) - BOUNDS_PADDING
-    north = max(lats) + BOUNDS_PADDING
-    west = min(lngs) - BOUNDS_PADDING
-    east = max(lngs) + BOUNDS_PADDING
+    south = min(lats) - 0.012
+    north = max(lats) + 0.005   # tight north — Gandimaisamma, not Dundigal
+    west = min(lngs) - 0.012
+    east = max(lngs) + 0.012
 
     center = [(south + north) / 2, (west + east) / 2]
     bounds = [[south, west], [north, east]]
@@ -42,11 +40,11 @@ def _compute_map_bounds():
 
 
 def _apply_fixed_bounds(m, bounds):
-    """Lock map to fixed bounds — users can't pan outside the region."""
+    """Lock map to fixed bounds. No fit_bounds (it adds extra padding)."""
     if bounds:
-        m.fit_bounds(bounds)
         m.options["maxBounds"] = bounds
         m.options["minZoom"] = 11
+        m.options["maxZoom"] = 18
 
 
 # 32 distinct colors — one per care group, no repeats
