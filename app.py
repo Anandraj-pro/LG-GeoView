@@ -24,6 +24,7 @@ from src.charts import (  # noqa: F401
 )
 from src.analytics import (
     compute_kpi_metrics, compute_territory_coverage, generate_html_report,
+    compute_coverage_scores,
 )
 from src.components import hero_banner_html, section_header_html, footer_html
 
@@ -348,6 +349,8 @@ with map_tab1:
         with lc3:
             show_density = st.checkbox(
                 "Member Density", value=False, key="lyr_density")
+            show_coverage = st.checkbox(
+                "Coverage Scoring", value=False, key="lyr_coverage")
 
     color_by_map = {
         "Area (unique colors)": "area",
@@ -375,12 +378,27 @@ with map_tab1:
     else:
         tk3.success("All covered")
 
+    # Compute coverage scores for coverage layer
+    coverage_scores_dict: dict[str, dict] | None = None
+    scored_summary = None
+    if show_coverage and not territory_summary.empty:
+        scored_summary = compute_coverage_scores(territory_summary)
+        coverage_scores_dict = {}
+        for _, crow in scored_summary.iterrows():
+            area_key = crow["area"].lower().strip()
+            coverage_scores_dict[area_key] = {
+                "score": float(crow["coverage_score"]),
+                "level": str(crow["coverage_level"]),
+                "color": str(crow["coverage_color"]),
+            }
+
     layer_config = {
         "boundaries": show_boundaries,
         "markers": show_markers,
         "gaps": show_gaps,
         "strength": show_strength,
         "density": show_density,
+        "coverage": show_coverage,
     }
 
     try:
@@ -390,11 +408,72 @@ with map_tab1:
             radius=territory_radius,
             color_by=color_by,
             layers=layer_config,
+            coverage_scores=coverage_scores_dict,
         )
         st_folium(t_map, use_container_width=True, height=550,
                   key="territory_map")
     except Exception as e:
         st.error(f"Could not render territory map: {e}")
+
+    # --- Coverage Summary Panel (Task 4) ---
+    if show_coverage and scored_summary is not None and not scored_summary.empty:
+        st.markdown("---")
+        st.markdown("**Coverage Scoring Summary**")
+
+        green_areas = scored_summary[scored_summary["coverage_level"] == "Well Served"]
+        yellow_areas = scored_summary[scored_summary["coverage_level"] == "Partial"]
+        red_areas = scored_summary[scored_summary["coverage_level"] == "Underserved"]
+
+        green_count = len(green_areas)
+        yellow_count = len(yellow_areas)
+        red_count = len(red_areas)
+
+        cv1, cv2, cv3 = st.columns(3)
+        with cv1:
+            st.markdown(
+                f'<div style="background:#E8F5E9;border-left:4px solid #2E7D32;'
+                f'padding:12px 16px;border-radius:4px;">'
+                f'<div style="font-size:24px;font-weight:bold;color:#2E7D32;">'
+                f'{green_count}</div>'
+                f'<div style="font-size:12px;color:#2E7D32;">Well Served</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+        with cv2:
+            st.markdown(
+                f'<div style="background:#FFF8E1;border-left:4px solid #F9A825;'
+                f'padding:12px 16px;border-radius:4px;">'
+                f'<div style="font-size:24px;font-weight:bold;color:#F57F17;">'
+                f'{yellow_count}</div>'
+                f'<div style="font-size:12px;color:#F57F17;">Partial Coverage</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+        with cv3:
+            st.markdown(
+                f'<div style="background:#FFEBEE;border-left:4px solid #C62828;'
+                f'padding:12px 16px;border-radius:4px;">'
+                f'<div style="font-size:24px;font-weight:bold;color:#C62828;">'
+                f'{red_count}</div>'
+                f'<div style="font-size:12px;color:#C62828;">Underserved</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+        # List underserved areas as expansion priorities
+        if red_count > 0:
+            red_names = sorted(red_areas["area"].tolist())
+            st.markdown(
+                f'<div style="margin-top:12px;padding:10px 14px;'
+                f'background:#FFEBEE;border-radius:6px;'
+                f'border:1px solid #FFCDD2;">'
+                f'<div style="font-weight:bold;color:#C62828;'
+                f'margin-bottom:4px;">Expansion Priorities (Underserved)</div>'
+                f'<div style="color:#B71C1C;font-size:13px;">'
+                f'{", ".join(red_names)}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
 
     # Export section
     exp_c1, exp_c2 = st.columns(2)

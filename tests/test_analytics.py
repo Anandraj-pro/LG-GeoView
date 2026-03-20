@@ -3,6 +3,7 @@
 import pandas as pd
 
 from src.analytics import (
+    compute_coverage_scores,
     compute_kpi_metrics,
     compute_territory_coverage,
     generate_html_report,
@@ -138,6 +139,153 @@ class TestComputeKpiMetrics:
         metrics = compute_kpi_metrics(df)
         assert metrics["strong_count"] == 1
         assert metrics["weak_count"] == 2
+
+
+class TestComputeCoverageScores:
+    """Tests for compute_coverage_scores."""
+
+    def _make_summary(self, rows):
+        """Helper to create a summary DataFrame from list of dicts."""
+        return pd.DataFrame(rows)
+
+    def test_basic_score_calculation(self):
+        """Verify score calculation with known values."""
+        summary = self._make_summary([{
+            "area": "TestArea",
+            "total_members": 30,
+            "total_groups": 2,
+            "avg_members": 15.0,
+        }])
+        result = compute_coverage_scores(summary)
+        # members_score = min(100, 30/30*100) = 100
+        # groups_score = min(100, 2/2*100) = 100
+        # avg_score = min(100, 15/20*100) = 75
+        # final = 100*0.4 + 100*0.4 + 75*0.2 = 40 + 40 + 15 = 95
+        assert result["coverage_score"].iloc[0] == 95.0
+        assert result["coverage_level"].iloc[0] == "Well Served"
+        assert result["coverage_color"].iloc[0] == "#2E7D32"
+
+    def test_high_members_scores_high(self):
+        """Area with 30+ members, 2+ groups should score >= 70 (green)."""
+        summary = self._make_summary([{
+            "area": "HighArea",
+            "total_members": 50,
+            "total_groups": 3,
+            "avg_members": 25.0,
+        }])
+        result = compute_coverage_scores(summary)
+        assert result["coverage_score"].iloc[0] >= 70
+        assert result["coverage_level"].iloc[0] == "Well Served"
+
+    def test_zero_members_scores_zero(self):
+        """Area with 0 members should score 0."""
+        summary = self._make_summary([{
+            "area": "EmptyArea",
+            "total_members": 0,
+            "total_groups": 0,
+            "avg_members": 0.0,
+        }])
+        result = compute_coverage_scores(summary)
+        assert result["coverage_score"].iloc[0] == 0.0
+        assert result["coverage_level"].iloc[0] == "Underserved"
+        assert result["coverage_color"].iloc[0] == "#C62828"
+
+    def test_green_boundary_at_70(self):
+        """Score exactly 70 should be classified as Well Served (green)."""
+        # We need: members_score*0.4 + groups_score*0.4 + avg_score*0.2 = 70
+        # If members=21 -> members_score=min(100,21/30*100)=70
+        # groups=1.4 -> groups_score=min(100,1.4/2*100)=70 (but groups is int)
+        # Let's pick values that give exactly 70:
+        # members=21 -> 70, groups=2 -> 100, avg=0 -> 0
+        # final = 70*0.4 + 100*0.4 + 0*0.2 = 28+40+0 = 68 -- not 70
+        # members=21 -> 70, groups=2 -> 100, avg=2 -> 10
+        # final = 70*0.4 + 100*0.4 + 10*0.2 = 28+40+2 = 70
+        summary = self._make_summary([{
+            "area": "BoundaryGreen",
+            "total_members": 21,
+            "total_groups": 2,
+            "avg_members": 2.0,
+        }])
+        result = compute_coverage_scores(summary)
+        assert result["coverage_score"].iloc[0] == 70.0
+        assert result["coverage_level"].iloc[0] == "Well Served"
+
+    def test_yellow_boundary_at_40(self):
+        """Score exactly 40 should be classified as Partial (yellow)."""
+        # members=12 -> 12/30*100 = 40, groups=0 -> 0, avg=0 -> 0
+        # final = 40*0.4 + 0*0.4 + 0*0.2 = 16 -- too low
+        # members=12 -> 40, groups=1 -> 50, avg=12 -> 60
+        # final = 40*0.4 + 50*0.4 + 60*0.2 = 16+20+12 = 48 -- too high
+        # Need exactly 40: try members=12(40), groups=1(50), avg=0(0)
+        # final = 40*0.4 + 50*0.4 + 0*0.2 = 16+20+0 = 36 -- too low
+        # members=15(50), groups=1(50), avg=0(0)
+        # final = 50*0.4 + 50*0.4 + 0*0.2 = 20+20+0 = 40
+        summary = self._make_summary([{
+            "area": "BoundaryYellow",
+            "total_members": 15,
+            "total_groups": 1,
+            "avg_members": 0.0,
+        }])
+        result = compute_coverage_scores(summary)
+        assert result["coverage_score"].iloc[0] == 40.0
+        assert result["coverage_level"].iloc[0] == "Partial"
+        assert result["coverage_color"].iloc[0] == "#F9A825"
+
+    def test_red_below_40(self):
+        """Score below 40 should be Underserved (red)."""
+        summary = self._make_summary([{
+            "area": "LowArea",
+            "total_members": 5,
+            "total_groups": 1,
+            "avg_members": 5.0,
+        }])
+        result = compute_coverage_scores(summary)
+        # members_score = 5/30*100 = 16.67
+        # groups_score = 1/2*100 = 50
+        # avg_score = 5/20*100 = 25
+        # final = 16.67*0.4 + 50*0.4 + 25*0.2 = 6.67+20+5 = 31.67
+        assert result["coverage_score"].iloc[0] < 40
+        assert result["coverage_level"].iloc[0] == "Underserved"
+        assert result["coverage_color"].iloc[0] == "#C62828"
+
+    def test_empty_dataframe(self):
+        """Empty DataFrame should return empty with added columns."""
+        summary = pd.DataFrame(columns=[
+            "area", "total_members", "total_groups", "avg_members",
+        ])
+        result = compute_coverage_scores(summary)
+        assert len(result) == 0
+        assert "coverage_score" in result.columns
+        assert "coverage_level" in result.columns
+        assert "coverage_color" in result.columns
+
+    def test_multiple_areas_mixed_levels(self):
+        """Multiple areas should be independently classified."""
+        summary = self._make_summary([
+            {"area": "Strong", "total_members": 60,
+             "total_groups": 4, "avg_members": 25.0},
+            {"area": "Medium", "total_members": 15,
+             "total_groups": 1, "avg_members": 15.0},
+            {"area": "Weak", "total_members": 3,
+             "total_groups": 1, "avg_members": 3.0},
+        ])
+        result = compute_coverage_scores(summary)
+        levels = result.set_index("area")["coverage_level"]
+        assert levels["Strong"] == "Well Served"
+        assert levels["Weak"] == "Underserved"
+
+    def test_score_caps_at_100_per_component(self):
+        """Scores should not exceed 100 per component even with large values."""
+        summary = self._make_summary([{
+            "area": "Huge",
+            "total_members": 200,
+            "total_groups": 10,
+            "avg_members": 50.0,
+        }])
+        result = compute_coverage_scores(summary)
+        # All components capped at 100
+        # final = 100*0.4 + 100*0.4 + 100*0.2 = 100
+        assert result["coverage_score"].iloc[0] == 100.0
 
 
 class TestGenerateHtmlReport:

@@ -7,6 +7,13 @@ import math
 import pandas as pd
 
 
+# Coverage scoring color constants
+COVERAGE_GREEN = "#2E7D32"
+COVERAGE_YELLOW = "#F9A825"
+COVERAGE_RED = "#C62828"
+COVERAGE_GRAY = "#9E9E9E"
+
+
 def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Calculate great-circle distance between two points in km."""
     R = 6371  # Earth radius in km
@@ -16,6 +23,72 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
          math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) *
          math.sin(dlon / 2) ** 2)
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+def compute_coverage_scores(summary_df: pd.DataFrame) -> pd.DataFrame:
+    """Score each area's coverage level.
+
+    Scoring based on weighted components:
+    - total_members: weight 40%
+    - total_groups: weight 40%
+    - avg_members per group: weight 20%
+
+    Classification:
+    - Green (Well Served): score >= 70
+    - Yellow (Partial): score >= 40
+    - Red (Underserved): score < 40
+
+    Parameters
+    ----------
+    summary_df : pd.DataFrame
+        Area summary with columns: area, total_members, total_groups,
+        avg_members.
+
+    Returns
+    -------
+    pd.DataFrame
+        Copy of summary_df with added columns: coverage_score,
+        coverage_level, coverage_color.
+    """
+    if summary_df.empty:
+        result = summary_df.copy()
+        result["coverage_score"] = pd.Series(dtype=float)
+        result["coverage_level"] = pd.Series(dtype=str)
+        result["coverage_color"] = pd.Series(dtype=str)
+        return result
+
+    result = summary_df.copy()
+
+    members = pd.to_numeric(result["total_members"], errors="coerce").fillna(0)
+    groups = pd.to_numeric(result["total_groups"], errors="coerce").fillna(0)
+    avg = pd.to_numeric(result["avg_members"], errors="coerce").fillna(0)
+
+    members_score = (members / 30 * 100).clip(upper=100)
+    groups_score = (groups / 2 * 100).clip(upper=100)
+    avg_score = (avg / 20 * 100).clip(upper=100)
+
+    result["coverage_score"] = (
+        members_score * 0.4 + groups_score * 0.4 + avg_score * 0.2
+    ).round(1)
+
+    def _classify(score: float) -> str:
+        if score >= 70:
+            return "Well Served"
+        elif score >= 40:
+            return "Partial"
+        return "Underserved"
+
+    def _color(score: float) -> str:
+        if score >= 70:
+            return COVERAGE_GREEN
+        elif score >= 40:
+            return COVERAGE_YELLOW
+        return COVERAGE_RED
+
+    result["coverage_level"] = result["coverage_score"].apply(_classify)
+    result["coverage_color"] = result["coverage_score"].apply(_color)
+
+    return result
 
 
 def compute_territory_coverage(

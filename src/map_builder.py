@@ -379,6 +379,14 @@ UNOCCUPIED_COLOR: dict[str, str] = {"fill": "#9E9E9E", "border": "#757575"}
 KUKATPALLY_CENTER: list[float] = [17.4948, 78.3996]
 KUKATPALLY_RADIUS: int = 3  # km
 
+# Coverage layer color constants
+COVERAGE_COLORS: dict[str, dict[str, str]] = {
+    "Well Served": {"fill": "#2E7D32", "border": "#1B5E20"},
+    "Partial": {"fill": "#F9A825", "border": "#F57F17"},
+    "Underserved": {"fill": "#C62828", "border": "#B71C1C"},
+    "No Data": {"fill": "#9E9E9E", "border": "#757575"},
+}
+
 
 def _convex_hull(points: list[tuple[float, float]]) -> list[tuple[float, float]]:
     """Compute convex hull using Andrew's monotone chain algorithm."""
@@ -778,16 +786,25 @@ def build_advanced_territory_map(
     radius: float = KUKATPALLY_RADIUS,
     color_by: str = "area",
     layers: dict[str, bool] | None = None,
+    coverage_scores: dict[str, dict] | None = None,
 ) -> folium.Map:
     """Build advanced territory map with real GHMC ward boundaries.
 
     Uses actual administrative polygon shapes from ward_boundaries.json.
     Layers controlled by ``layers`` dict from Streamlit checkboxes.
+
+    Parameters
+    ----------
+    coverage_scores : dict, optional
+        Mapping of area_name (lowercase) -> dict with keys:
+        score (float), level (str), color (str).
+        Used when the coverage layer is enabled.
     """
     if layers is None:
         layers = {
             "boundaries": True, "markers": True,
             "gaps": False, "strength": False, "density": False,
+            "coverage": False,
         }
     t0 = time.perf_counter()
     logger.info("Building advanced territory map, color_by=%s", color_by)
@@ -841,12 +858,32 @@ def build_advanced_territory_map(
                 ward_to_areas[ward] = []
             ward_to_areas[ward].append(area_name)
 
+    # Determine if coverage layer is active
+    show_coverage = layers.get("coverage", False) and coverage_scores
+
     # Assign colors per ward
     ward_color_map: dict[str, dict[str, str]] = {}
     cidx = 0
     for ward_name in ward_to_areas:
         areas_in_ward = ward_to_areas[ward_name]
         has_groups = any(a in occupied for a in areas_in_ward)
+
+        # Coverage layer overrides ward coloring
+        if show_coverage:
+            # Find best coverage level among areas in this ward
+            best_score = -1.0
+            best_level = "No Data"
+            for a in areas_in_ward:
+                cs = coverage_scores.get(a)
+                if cs is not None:
+                    sc = cs.get("score", 0)
+                    if sc > best_score:
+                        best_score = sc
+                        best_level = cs.get("level", "No Data")
+            ward_color_map[ward_name] = COVERAGE_COLORS.get(
+                best_level, COVERAGE_COLORS["No Data"]
+            )
+            continue
 
         if not has_groups:
             ward_color_map[ward_name] = UNOCCUPIED_COLOR
@@ -913,6 +950,20 @@ def build_advanced_territory_map(
         display = html_escape(ward_name.replace("Ward ", ""))
         esc_ward = html_escape(ward_name)
 
+        # Build coverage info for popup when coverage layer is active
+        coverage_popup_extra = ""
+        if show_coverage:
+            for a in ward_areas:
+                cs = coverage_scores.get(a)
+                if cs is not None:
+                    csc = cs.get("score", 0)
+                    clv = html_escape(str(cs.get("level", "")))
+                    coverage_popup_extra += (
+                        f'<div style="font-size:11px;margin-top:4px;">'
+                        f'Coverage: <b style="color:{cs.get("color", "#333")};">'
+                        f'{clv}</b> ({csc:.0f})</div>'
+                    )
+
         if has_groups:
             areas_str = html_escape(
                 ", ".join(area_list) if area_list else "\u2014"
@@ -932,19 +983,27 @@ def build_advanced_territory_map(
                 f'<td align="right"><b>{total_mem}</b></td></tr>'
                 f'<tr><td>Avg/Group:</td>'
                 f'<td align="right"><b>{avg:.1f}</b></td></tr>'
-                f'</table></div>')
+                f'</table>'
+                f'{coverage_popup_extra}'
+                f'</div>')
         else:
             popup_t = (
                 f'<div style="font-family:Arial;padding:10px;">'
                 f'<b style="font-size:14px;">{esc_ward}</b><br>'
                 f'<span style="color:#e74c3c;font-weight:bold;">'
-                f'No groups \u2014 expansion zone</span></div>')
+                f'No groups \u2014 expansion zone</span>'
+                f'{coverage_popup_extra}'
+                f'</div>')
 
         # Draw the real irregular ward polygon
+        fill_opacity = 0.40 if has_groups else 0.10
+        if show_coverage:
+            fill_opacity = 0.45 if has_groups else 0.20
+
         folium.Polygon(
             locations=bnd, color=colors["border"],
             fill=True, fill_color=colors["fill"],
-            fill_opacity=0.40 if has_groups else 0.10,
+            fill_opacity=fill_opacity,
             weight=3,
             popup=folium.Popup(popup_t, max_width=280),
             tooltip=esc_ward,
@@ -953,6 +1012,20 @@ def build_advanced_territory_map(
         # Ward label at centroid
         avg_lat = sum(p[0] for p in bnd) / len(bnd)
         avg_lng = sum(p[1] for p in bnd) / len(bnd)
+
+        label_text = display
+        if show_coverage:
+            # Add coverage score to the label
+            best_score = -1.0
+            for a in ward_areas:
+                cs = coverage_scores.get(a)
+                if cs is not None:
+                    sc = cs.get("score", 0)
+                    if sc > best_score:
+                        best_score = sc
+            if best_score >= 0:
+                label_text = f"{display} ({best_score:.0f})"
+
         folium.Marker(
             location=[avg_lat, avg_lng],
             icon=folium.DivIcon(html=(
@@ -961,7 +1034,7 @@ def build_advanced_territory_map(
                 f'text-shadow:1px 1px 2px white,-1px -1px 2px white,'
                 f'1px -1px 2px white,-1px 1px 2px white;'
                 f'text-align:center;pointer-events:none;'
-                f'white-space:nowrap;">{display}</div>'),
+                f'white-space:nowrap;">{label_text}</div>'),
                 icon_size=(180, 18), icon_anchor=(90, 9)),
         ).add_to(t_layer)
 
