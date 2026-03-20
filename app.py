@@ -921,7 +921,7 @@ with st.sidebar:
         )
         territory_radius = st.slider(
             "Nearby radius (km):",
-            min_value=1, max_value=15, value=10,
+            min_value=1, max_value=20, value=15,
             key="territory_radius",
         )
         color_mode = st.selectbox(
