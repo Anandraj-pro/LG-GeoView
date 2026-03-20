@@ -53,15 +53,137 @@ def _check_auth():
     if st.session_state.get("authenticated"):
         return True
 
+    # Circuit board SVG animation background
     st.markdown("""
-    <div style="text-align: center; padding: 40px 20px;">
-        <div style="font-family: 'Cinzel', serif; font-size: 2rem;
-             color: #D4AF37; letter-spacing: 3px;
-             margin-bottom: 8px;">TKT Kingdom</div>
-        <div style="font-family: 'Cormorant Garamond', serif;
-             font-size: 1rem; color: #888;
-             font-style: italic;">
-             West Campus - Hyderabad</div>
+    <style>
+    @keyframes cpuPulse1 {
+        0%,100% { opacity:0.2; } 50% { opacity:0.8; }
+    }
+    @keyframes cpuPulse2 {
+        0%,100% { opacity:0.15; } 50% { opacity:0.7; }
+    }
+    @keyframes cpuDash {
+        to { stroke-dashoffset: 0; }
+    }
+    @keyframes cpuGlow {
+        0%,100% { filter:drop-shadow(0 0 2px #D4AF37); }
+        50% { filter:drop-shadow(0 0 8px #D4AF37); }
+    }
+    .login-wrapper {
+        position:relative; max-width:420px; margin:0 auto;
+        padding:40px 30px 30px; text-align:center;
+    }
+    .login-svg {
+        position:absolute; top:0; left:0; width:100%; height:100%;
+        pointer-events:none; opacity:0.6;
+    }
+    .login-title {
+        font-family:'Cinzel',serif; font-size:2.2rem;
+        color:#D4AF37; letter-spacing:4px; margin:0;
+        animation:cpuGlow 3s ease-in-out infinite;
+    }
+    .login-sub {
+        font-family:'Cormorant Garamond',serif; font-size:1rem;
+        color:#888; font-style:italic; margin:6px 0 24px;
+    }
+    .login-verse {
+        font-family:'Cormorant Garamond',serif; font-size:0.8rem;
+        color:#555; font-style:italic; margin-top:16px;
+        line-height:1.5;
+    }
+    </style>
+    <div class="login-wrapper">
+        <svg class="login-svg" viewBox="0 0 420 400"
+             xmlns="http://www.w3.org/2000/svg">
+            <g stroke="#D4AF3733" fill="none" stroke-width="0.5">
+                <path d="M 30 50 h 120 q 8 0 8 8 v 80"
+                    stroke-dasharray="300" stroke-dashoffset="300">
+                    <animate attributeName="stroke-dashoffset"
+                        from="300" to="0" dur="2s" fill="freeze"/>
+                </path>
+                <path d="M 390 30 h -140 q -8 0 -8 8 v 80"
+                    stroke-dasharray="300" stroke-dashoffset="300">
+                    <animate attributeName="stroke-dashoffset"
+                        from="300" to="0" dur="2.2s" fill="freeze"/>
+                </path>
+                <path d="M 50 350 h 100 q 8 0 8 -8 v -80"
+                    stroke-dasharray="300" stroke-dashoffset="300">
+                    <animate attributeName="stroke-dashoffset"
+                        from="300" to="0" dur="1.8s" fill="freeze"/>
+                </path>
+                <path d="M 370 370 h -120 q -8 0 -8 -8 v -80"
+                    stroke-dasharray="300" stroke-dashoffset="300">
+                    <animate attributeName="stroke-dashoffset"
+                        from="300" to="0" dur="2.4s" fill="freeze"/>
+                </path>
+                <path d="M 210 10 v 120"
+                    stroke-dasharray="150" stroke-dashoffset="150">
+                    <animate attributeName="stroke-dashoffset"
+                        from="150" to="0" dur="1.5s" fill="freeze"/>
+                </path>
+                <path d="M 210 390 v -120"
+                    stroke-dasharray="150" stroke-dashoffset="150">
+                    <animate attributeName="stroke-dashoffset"
+                        from="150" to="0" dur="1.6s" fill="freeze"/>
+                </path>
+            </g>
+            <g fill="#D4AF37">
+                <circle cx="30" cy="50" r="3" opacity="0.3">
+                    <animate attributeName="opacity"
+                        values="0.2;0.8;0.2" dur="2s"
+                        repeatCount="indefinite"/></circle>
+                <circle cx="390" cy="30" r="3" opacity="0.3">
+                    <animate attributeName="opacity"
+                        values="0.15;0.7;0.15" dur="2.5s"
+                        repeatCount="indefinite"/></circle>
+                <circle cx="50" cy="350" r="3" opacity="0.3">
+                    <animate attributeName="opacity"
+                        values="0.2;0.6;0.2" dur="1.8s"
+                        repeatCount="indefinite"/></circle>
+                <circle cx="370" cy="370" r="3" opacity="0.3">
+                    <animate attributeName="opacity"
+                        values="0.15;0.75;0.15" dur="2.2s"
+                        repeatCount="indefinite"/></circle>
+                <circle cx="210" cy="10" r="2.5" opacity="0.25">
+                    <animate attributeName="opacity"
+                        values="0.2;0.7;0.2" dur="3s"
+                        repeatCount="indefinite"/></circle>
+                <circle cx="210" cy="390" r="2.5" opacity="0.25">
+                    <animate attributeName="opacity"
+                        values="0.15;0.65;0.15" dur="2.8s"
+                        repeatCount="indefinite"/></circle>
+            </g>
+            <rect x="170" y="160" width="80" height="80" rx="6"
+                fill="#0a0a0f" stroke="#D4AF3744" stroke-width="1">
+                <animate attributeName="stroke-opacity"
+                    values="0.2;0.6;0.2" dur="3s"
+                    repeatCount="indefinite"/>
+            </rect>
+            <g fill="#D4AF3744">
+                <rect x="185" y="155" width="4" height="6" rx="1"/>
+                <rect x="195" y="155" width="4" height="6" rx="1"/>
+                <rect x="205" y="155" width="4" height="6" rx="1"/>
+                <rect x="215" y="155" width="4" height="6" rx="1"/>
+                <rect x="225" y="155" width="4" height="6" rx="1"/>
+                <rect x="185" y="239" width="4" height="6" rx="1"/>
+                <rect x="195" y="239" width="4" height="6" rx="1"/>
+                <rect x="205" y="239" width="4" height="6" rx="1"/>
+                <rect x="215" y="239" width="4" height="6" rx="1"/>
+                <rect x="225" y="239" width="4" height="6" rx="1"/>
+                <rect x="165" y="175" width="6" height="4" rx="1"/>
+                <rect x="165" y="185" width="6" height="4" rx="1"/>
+                <rect x="165" y="195" width="6" height="4" rx="1"/>
+                <rect x="165" y="205" width="6" height="4" rx="1"/>
+                <rect x="165" y="215" width="6" height="4" rx="1"/>
+                <rect x="249" y="175" width="6" height="4" rx="1"/>
+                <rect x="249" y="185" width="6" height="4" rx="1"/>
+                <rect x="249" y="195" width="6" height="4" rx="1"/>
+                <rect x="249" y="205" width="6" height="4" rx="1"/>
+                <rect x="249" y="215" width="6" height="4" rx="1"/>
+            </g>
+        </svg>
+        <div class="login-title">TKT Kingdom</div>
+        <div class="login-sub">West Campus - Hyderabad</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -85,6 +207,13 @@ def _check_auth():
                     ].get("name", username)
                     st.rerun()
             st.error("Invalid username or password")
+
+        st.markdown("""
+        <div class="login-verse">
+            "The harvest is plentiful, but the workers are few."
+            <br>- Matthew 9:37
+        </div>
+        """, unsafe_allow_html=True)
     return False
 
 
