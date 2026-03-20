@@ -748,3 +748,56 @@
             print-color-adjust: exact !important;
         }
     }
+
+    /* --- Typewriter Effect for Scripture Verses --- */
+    @keyframes typewriter {
+        from { max-width: 0; }
+        to { max-width: 100%; }
+    }
+    @keyframes blink-caret {
+        0%, 100% { border-color: transparent; }
+        50% { border-color: #D4AF37; }
+    }
+    @keyframes fade-cycle {
+        0%, 8% { opacity: 1; }
+        25%, 100% { opacity: 0; }
+    }
+
+    .typewriter-container {
+        position: relative;
+        min-height: 3em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .typewriter-verse {
+        position: absolute;
+        font-family: 'Cormorant Garamond', serif;
+        font-style: italic;
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        line-height: 1.5;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        border-right: 2px solid transparent;
+        max-width: 0;
+        opacity: 0;
+    }
+    .typewriter-verse.tw-active {
+        animation:
+            typewriter 3s steps(60, end) forwards,
+            blink-caret 0.7s step-end infinite,
+            fade-cycle 12s linear forwards;
+    }
+    .typewriter-verse.tw-v1 { animation-delay: 0s, 0s, 0s; }
+    .typewriter-verse.tw-v2 { animation-delay: 12s, 12s, 12s; }
+    .typewriter-verse.tw-v3 { animation-delay: 24s, 24s, 24s; }
+    .typewriter-verse.tw-v4 { animation-delay: 36s, 36s, 36s; }
+
+    @media screen and (max-width: 480px) {
+        .typewriter-verse {
+            font-size: 0.75rem;
+            white-space: normal;
+        }
+    }

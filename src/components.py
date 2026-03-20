@@ -32,12 +32,7 @@ def hero_banner_html(kpi: dict) -> str:
         '</div>'
         '<div class="hero-title-line1">TKT Kingdom</div>'
         '<div class="hero-title-line2">Expanding His Territory</div>'
-        '<div class="hero-scripture">'
-        '"The harvest is plentiful, but the workers are few.'
-        ' Ask the Lord of the harvest to send out workers'
-        ' into his harvest field."'
-        '<br>- Matthew 9:37-38'
-        '</div>'
+        f'{typewriter_verse_html()}'
         '</div>'
         '<div class="hero-kpis">'
         '<div class="hero-kpi">'
@@ -95,15 +90,48 @@ def section_header_html(
     if verse:
         ref_part = f" - {reference}" if reference else ""
         verse_html = (
-            '<div style="font-family: \'Cormorant Garamond\', serif;'
-            ' font-size: 0.85rem; color: var(--text-muted); font-style: italic;'
-            f' margin-bottom: 12px;">"{verse}"{ref_part}</div>'
+            '<div class="typewriter-container" style="min-height:2em;">'
+            '<div class="typewriter-verse tw-active tw-v1">'
+            f'"{verse}"{ref_part}'
+            '</div></div>'
         )
     return (
         '<div style="font-family: \'Cinzel\', serif; font-size: 1.1rem;'
         ' color: var(--text-heading); letter-spacing: 2px; margin-bottom: 4px;">'
         f'    {icon} {title}</div>'
         f'{verse_html}'
+    )
+
+
+SCRIPTURE_VERSES = [
+    ("The harvest is plentiful, but the workers are few.",
+     "Matthew 9:37"),
+    ("Go and make disciples of all nations.",
+     "Matthew 28:19"),
+    ("Where two or three gather in my name, there am I.",
+     "Matthew 18:20"),
+    ("The earth is the Lord's, and everything in it.",
+     "Psalm 24:1"),
+]
+
+
+def typewriter_verse_html() -> str:
+    """Generate a cycling typewriter scripture verse component.
+
+    Returns
+    -------
+    str
+        HTML with 4 verses that type out and cycle via CSS animation.
+    """
+    verses_html = ""
+    for i, (verse, ref) in enumerate(SCRIPTURE_VERSES):
+        verses_html += (
+            f'<div class="typewriter-verse tw-active tw-v{i + 1}">'
+            f'"{verse}" - {ref}'
+            f'</div>'
+        )
+    return (
+        f'<div class="typewriter-container">{verses_html}</div>'
     )
 
 
@@ -117,15 +145,7 @@ def footer_html() -> str:
     """
     return (
         '<div style="text-align: center; padding: 16px 0 8px 0;">'
-        '    <div style="font-family: \'Cormorant Garamond\', serif;'
-        '         font-size: 0.9rem; color: var(--text-muted); font-style: italic;'
-        '         max-width: 500px; margin: 0 auto; line-height: 1.5;">'
-        '        "The harvest is plentiful, but the workers are few.'
-        '        Ask the Lord of the harvest to send out workers'
-        '        into his harvest field."'
-        '        <br><span style="font-size: 0.8rem; color: var(--text-muted);">'
-        '        - Matthew 9:37-38</span>'
-        '    </div>'
+        f'    {typewriter_verse_html()}'
         '    <div style="width: 60px; height: 1px;'
         '         background: linear-gradient(90deg, transparent, #D4AF37, transparent);'
         '         margin: 12px auto;"></div>'
