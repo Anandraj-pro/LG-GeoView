@@ -7,12 +7,27 @@ import time
 from html import escape as html_escape
 from xml.sax.saxutils import escape as xml_escape
 
+import math
+
 import folium
 import pandas as pd
 from folium.plugins import HeatMap
 
-from src.analytics import haversine_km
 from src.logger import get_logger
+
+
+def _haversine_km(lat1: float, lon1: float,
+                  lat2: float, lon2: float) -> float:
+    """Great-circle distance in km (local copy to avoid circular import)."""
+    r = 6371
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = (math.sin(dlat / 2) ** 2 +
+         math.cos(math.radians(lat1)) *
+         math.cos(math.radians(lat2)) *
+         math.sin(dlon / 2) ** 2)
+    return r * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
 
 logger = get_logger(__name__)
 
@@ -558,7 +573,7 @@ def build_territory_map(
     # Find nearby area coordinates using Haversine distance
     nearby: dict[str, tuple[float, float] | list[float]] = {}
     for area_name, coords in AREA_COORDINATES.items():
-        dist = haversine_km(
+        dist = _haversine_km(
             center_coords[0], center_coords[1], coords[0], coords[1])
         if dist <= radius:
             nearby[area_name] = coords
@@ -866,7 +881,7 @@ def build_advanced_territory_map(
     # Find nearby areas using Haversine distance
     nearby: dict[str, tuple[float, float] | list[float]] = {}
     for area_name, coords in AREA_COORDINATES.items():
-        dist = haversine_km(
+        dist = _haversine_km(
             center_coords[0], center_coords[1], coords[0], coords[1])
         if dist <= radius:
             nearby[area_name] = coords
