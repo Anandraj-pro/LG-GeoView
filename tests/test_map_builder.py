@@ -432,16 +432,16 @@ class TestBuildAdvancedTerritoryMap:
             sample_df, summary, color_by="density")
         assert isinstance(m, folium.Map)
 
-    def test_has_layer_control(self, sample_df):
-        """Map should have LayerControl."""
+    def test_layers_parameter(self, sample_df):
+        """Map should accept layers config."""
         sample_df = sample_df.copy()
         sample_df["strength"] = "Medium"
         summary = self._make_summary(sample_df)
-        m = build_advanced_territory_map(sample_df, summary)
-        children = list(m._children.values())
-        layer_controls = [c for c in children
-                          if isinstance(c, folium.LayerControl)]
-        assert len(layer_controls) == 1
+        layers = {"boundaries": True, "markers": False,
+                  "gaps": True, "strength": False, "density": False}
+        m = build_advanced_territory_map(
+            sample_df, summary, layers=layers)
+        assert isinstance(m, folium.Map)
 
     def test_empty_df(self):
         """Empty DataFrame should return valid map."""

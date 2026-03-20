@@ -1011,13 +1011,18 @@ def build_advanced_territory_map(
     center_area="Kukatpally",
     radius=KUKATPALLY_RADIUS,
     color_by="area",
+    layers=None,
 ):
     """Build advanced territory map with real GHMC ward boundaries.
 
     Uses actual administrative polygon shapes from ward_boundaries.json.
-    Layers: Ward Boundaries, Group Markers, Gap Analysis,
-    Strength Indicators, and Member Density Stats.
+    Layers controlled by `layers` dict from Streamlit checkboxes.
     """
+    if layers is None:
+        layers = {
+            "boundaries": True, "markers": True,
+            "gaps": False, "strength": False, "density": False,
+        }
     t0 = time.perf_counter()
     logger.info("Building advanced territory map, color_by=%s", color_by)
 
@@ -1118,8 +1123,8 @@ def build_advanced_territory_map(
             cidx += 1
 
     # --- Layer 1: Real Ward Boundary Polygons ---
-    t_layer = folium.FeatureGroup(
-        name="Ward Boundaries", show=True)
+    if layers.get("boundaries", True):
+        t_layer = m  # add directly to map
 
     for ward_name, ward_areas in ward_to_areas.items():
         bnd = ward_boundaries.get(ward_name)
@@ -1192,8 +1197,6 @@ def build_advanced_territory_map(
                 icon_size=(180, 18), icon_anchor=(90, 9)),
         ).add_to(t_layer)
 
-    t_layer.add_to(m)
-
     # Build area -> color lookup from ward colors
     area_color_map = {}
     for area_name in area_names:
@@ -1206,127 +1209,121 @@ def build_advanced_territory_map(
             area_color_map[area_name] = UNOCCUPIED_COLOR
 
     # --- Layer 2: Group Markers ---
-    m_layer = folium.FeatureGroup(
-        name="Group Markers", show=True)
     nearby_df = df[
         df["area"].str.lower().str.strip().isin(set(area_names))]
-    for _, row in nearby_df.iterrows():
-        mem = int(row["members"])
-        akey = row["area"].lower().strip()
-        colors = area_color_map.get(akey, TERRITORY_PALETTE[0])
-        popup_html = (
-            f'<div style="font-family:Arial;padding:8px;'
-            f'min-width:150px;">'
-            f'<b style="color:{colors["border"]};">'
-            f'{row["leader_name"]}</b>'
-            f' ({row["area"]})<hr style="margin:4px 0;">'
-            f'<div style="font-size:12px;">'
-            f'Families: {int(row.get("families", 0))}<br>'
-            f'Individuals: {int(row.get("individuals", 0))}<br>'
-            f'Total: <b>{mem}</b><br>'
-            f'Meeting: {row.get("meeting_day", "")}<br>'
-            f'Strength: {row.get("strength", "")}</div></div>')
-        folium.CircleMarker(
-            location=[row["latitude"], row["longitude"]],
-            radius=max(6, mem * 0.4),
-            color=colors["border"], fill=True,
-            fill_color=colors["fill"], fill_opacity=0.9, weight=2,
-            popup=folium.Popup(popup_html, max_width=200),
-            tooltip=f"{row['leader_name']} \u2014 {mem} members",
-        ).add_to(m_layer)
-    m_layer.add_to(m)
-
+    if layers.get("markers", True):
+        for _, row in nearby_df.iterrows():
+            mem = int(row["members"])
+            akey = row["area"].lower().strip()
+            colors = area_color_map.get(akey, TERRITORY_PALETTE[0])
+            popup_html = (
+                f'<div style="font-family:Arial;padding:8px;'
+                f'min-width:150px;">'
+                f'<b style="color:{colors["border"]};">'
+                f'{row["leader_name"]}</b>'
+                f' ({row["area"]})<hr style="margin:4px 0;">'
+                f'<div style="font-size:12px;">'
+                f'Families: {int(row.get("families", 0))}<br>'
+                f'Individuals: {int(row.get("individuals", 0))}<br>'
+                f'Total: <b>{mem}</b><br>'
+                f'Meeting: {row.get("meeting_day", "")}<br>'
+                f'Strength: {row.get("strength", "")}'
+                f'</div></div>')
+            folium.CircleMarker(
+                location=[row["latitude"], row["longitude"]],
+                radius=max(6, mem * 0.4),
+                color=colors["border"], fill=True,
+                fill_color=colors["fill"],
+                fill_opacity=0.9, weight=2,
+                popup=folium.Popup(popup_html, max_width=200),
+                tooltip=(
+                    f"{row['leader_name']} \u2014 {mem} members"
+                ),
+            ).add_to(m)
     # --- Layer 3: Gap Analysis ---
-    g_layer = folium.FeatureGroup(
-        name="Gap Analysis (Expansion)", show=False)
-    for name in area_names:
-        if name in occupied:
-            continue
-        coords = nearby[name]
-        display = name.title()
-        folium.CircleMarker(
-            location=coords, radius=20, color="#e74c3c",
-            fill=True, fill_color="#e74c3c",
-            fill_opacity=0.15, weight=2, dash_array="5 5",
-        ).add_to(g_layer)
-        folium.CircleMarker(
-            location=coords, radius=8, color="#e74c3c",
-            fill=True, fill_color="#e74c3c",
-            fill_opacity=0.4, weight=0,
-        ).add_to(g_layer)
-        folium.Marker(
-            location=[coords[0] - 0.002, coords[1]],
-            icon=folium.DivIcon(html=(
-                f'<div style="font-family:Arial;font-size:10px;'
-                f'color:#c0392b;font-weight:bold;'
-                f'text-shadow:1px 1px 2px white,-1px -1px 2px white;'
-                f'text-align:center;pointer-events:none;">'
-                f'{display}<br>'
-                f'<span style="font-size:9px;color:#e74c3c;">'
-                f'NO COVERAGE</span></div>'),
-                icon_size=(140, 28), icon_anchor=(70, 14)),
-        ).add_to(g_layer)
-    g_layer.add_to(m)
-
+    if layers.get("gaps", False):
+        for name in area_names:
+            if name in occupied:
+                continue
+            coords = nearby[name]
+            display = name.title()
+            folium.CircleMarker(
+                location=coords, radius=20, color="#e74c3c",
+                fill=True, fill_color="#e74c3c",
+                fill_opacity=0.15, weight=2, dash_array="5 5",
+            ).add_to(m)
+            folium.CircleMarker(
+                location=coords, radius=8, color="#e74c3c",
+                fill=True, fill_color="#e74c3c",
+                fill_opacity=0.4, weight=0,
+            ).add_to(m)
+            folium.Marker(
+                location=[coords[0] - 0.002, coords[1]],
+                icon=folium.DivIcon(html=(
+                    f'<div style="font-family:Arial;font-size:10px;'
+                    f'color:#c0392b;font-weight:bold;'
+                    f'text-shadow:1px 1px 2px white,'
+                    f'-1px -1px 2px white;'
+                    f'text-align:center;pointer-events:none;">'
+                    f'{display}<br>'
+                    f'<span style="font-size:9px;color:#e74c3c;">'
+                    f'NO COVERAGE</span></div>'),
+                    icon_size=(140, 28), icon_anchor=(70, 14)),
+            ).add_to(m)
     # --- Layer 4: Strength Indicators ---
-    s_layer = folium.FeatureGroup(
-        name="Strength Indicators", show=False)
-    for _, row in nearby_df.iterrows():
-        st = row.get("strength", "Weak")
-        mem = int(row["members"])
-        sc = STRENGTH_TERRITORY.get(st, STRENGTH_TERRITORY["Weak"])
-        sym = {"Strong": "+", "Medium": "~", "Weak": "-"}.get(
-            st, "?")
-        folium.CircleMarker(
-            location=[row["latitude"], row["longitude"]],
-            radius=max(10, mem * 0.5),
-            color=sc["border"], fill=True,
-            fill_color=sc["fill"], fill_opacity=0.3, weight=2,
-        ).add_to(s_layer)
-        folium.Marker(
-            location=[row["latitude"], row["longitude"]],
-            icon=folium.DivIcon(html=(
-                f'<div style="font-family:Arial;font-size:11px;'
-                f'font-weight:bold;color:{sc["border"]};'
-                f'text-shadow:1px 1px 1px white;'
-                f'text-align:center;pointer-events:none;">'
-                f'{sym}{mem}</div>'),
-                icon_size=(40, 16), icon_anchor=(20, 8)),
-        ).add_to(s_layer)
-    s_layer.add_to(m)
-
+    if layers.get("strength", False):
+        for _, row in nearby_df.iterrows():
+            st = row.get("strength", "Weak")
+            mem = int(row["members"])
+            sc = STRENGTH_TERRITORY.get(
+                st, STRENGTH_TERRITORY["Weak"])
+            sym = {"Strong": "+", "Medium": "~", "Weak": "-"}.get(
+                st, "?")
+            folium.CircleMarker(
+                location=[row["latitude"], row["longitude"]],
+                radius=max(10, mem * 0.5),
+                color=sc["border"], fill=True,
+                fill_color=sc["fill"], fill_opacity=0.3, weight=2,
+            ).add_to(m)
+            folium.Marker(
+                location=[row["latitude"], row["longitude"]],
+                icon=folium.DivIcon(html=(
+                    f'<div style="font-family:Arial;font-size:11px;'
+                    f'font-weight:bold;color:{sc["border"]};'
+                    f'text-shadow:1px 1px 1px white;'
+                    f'text-align:center;pointer-events:none;">'
+                    f'{sym}{mem}</div>'),
+                    icon_size=(40, 16), icon_anchor=(20, 8)),
+            ).add_to(m)
     # --- Layer 5: Member Density Stats ---
-    d_layer = folium.FeatureGroup(
-        name="Member Density Stats", show=False)
-    for name in area_names:
-        srow = slookup.get(name)
-        if srow is None:
-            continue
-        coords = nearby[name]
-        mem = int(srow["total_members"])
-        grp = int(srow["total_groups"])
-        avg = mem / grp if grp > 0 else 0
-        folium.Marker(
-            location=[coords[0] - 0.001, coords[1]],
-            icon=folium.DivIcon(html=(
-                f'<div style="font-family:Arial;background:white;'
-                f'border:1px solid #ddd;border-radius:6px;'
-                f'padding:6px 8px;box-shadow:0 1px 4px '
-                f'rgba(0,0,0,0.2);text-align:center;'
-                f'pointer-events:none;">'
-                f'<div style="font-size:11px;font-weight:bold;'
-                f'color:#333;">{name.title()}</div>'
-                f'<div style="font-size:18px;font-weight:bold;'
-                f'color:#2E7D32;">{mem}</div>'
-                f'<div style="font-size:9px;color:#888;">'
-                f'{grp} groups &middot; avg {avg:.0f}</div>'
-                f'</div>'),
-                icon_size=(130, 60), icon_anchor=(65, 30)),
-        ).add_to(d_layer)
-    d_layer.add_to(m)
+    if layers.get("density", False):
+        for name in area_names:
+            srow = slookup.get(name)
+            if srow is None:
+                continue
+            coords = nearby[name]
+            mem = int(srow["total_members"])
+            grp = int(srow["total_groups"])
+            avg = mem / grp if grp > 0 else 0
+            folium.Marker(
+                location=[coords[0] - 0.001, coords[1]],
+                icon=folium.DivIcon(html=(
+                    f'<div style="font-family:Arial;background:white;'
+                    f'border:1px solid #ddd;border-radius:6px;'
+                    f'padding:6px 8px;box-shadow:0 1px 4px '
+                    f'rgba(0,0,0,0.2);text-align:center;'
+                    f'pointer-events:none;">'
+                    f'<div style="font-size:11px;font-weight:bold;'
+                    f'color:#333;">{name.title()}</div>'
+                    f'<div style="font-size:18px;font-weight:bold;'
+                    f'color:#2E7D32;">{mem}</div>'
+                    f'<div style="font-size:9px;color:#888;">'
+                    f'{grp} groups avg {avg:.0f}</div>'
+                    f'</div>'),
+                    icon_size=(130, 60), icon_anchor=(65, 30)),
+            ).add_to(m)
 
-    # Layer control toggle (top-right checkbox panel)
-    folium.LayerControl(collapsed=True).add_to(m)
+    # No Folium LayerControl — layers controlled via Streamlit UI
 
     # Mobile-responsive styles for map UI elements
     mobile_css = """

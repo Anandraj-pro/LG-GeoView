@@ -984,7 +984,23 @@ map_tab1, map_tab2 = st.tabs(
 )
 
 with map_tab1:
-    # --- Territory Analysis — map first, no clutter ---
+    # --- Layer settings above map ---
+    with st.expander("Layer Settings", expanded=False):
+        lc1, lc2, lc3 = st.columns(3)
+        with lc1:
+            show_boundaries = st.checkbox(
+                "Ward Boundaries", value=True, key="lyr_boundaries")
+            show_markers = st.checkbox(
+                "Group Markers", value=True, key="lyr_markers")
+        with lc2:
+            show_gaps = st.checkbox(
+                "Gap Analysis", value=False, key="lyr_gaps")
+            show_strength = st.checkbox(
+                "Strength Indicators", value=False, key="lyr_strength")
+        with lc3:
+            show_density = st.checkbox(
+                "Member Density", value=False, key="lyr_density")
+
     color_by_map = {
         "Area (unique colors)": "area",
         "Strength": "strength",
@@ -994,12 +1010,21 @@ with map_tab1:
 
     territory_summary = get_area_summary(df_filtered)
 
+    layer_config = {
+        "boundaries": show_boundaries,
+        "markers": show_markers,
+        "gaps": show_gaps,
+        "strength": show_strength,
+        "density": show_density,
+    }
+
     try:
         t_map = build_advanced_territory_map(
             df_filtered, territory_summary,
             center_area=focus_area,
             radius=territory_radius * 0.01,
             color_by=color_by,
+            layers=layer_config,
         )
         st_folium(t_map, use_container_width=True, height=550,
                   key="territory_map")
