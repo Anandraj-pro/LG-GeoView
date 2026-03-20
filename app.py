@@ -15,6 +15,7 @@ from src.data_loader import (
 )
 from src.map_builder import (
     build_kingdom_map, build_advanced_territory_map,
+    build_heatmap_map,
     generate_territory_kml, MAP_STYLES,
 )
 from src.charts import (  # noqa: F401
@@ -24,7 +25,7 @@ from src.charts import (  # noqa: F401
 )
 from src.analytics import (
     compute_kpi_metrics, compute_territory_coverage, generate_html_report,
-    compute_coverage_scores,
+    compute_coverage_scores, compute_density_metrics,
 )
 from src.components import hero_banner_html, section_header_html, footer_html
 
@@ -328,8 +329,8 @@ st.markdown(hero_banner_html(kpi), unsafe_allow_html=True)
 chart_dark = not light_mode
 
 # --- Map ---
-map_tab1, map_tab2 = st.tabs(
-    ["Territory Analysis", "TKT Kingdom"]
+map_tab1, map_tab2, map_tab3 = st.tabs(
+    ["Territory Analysis", "TKT Kingdom", "Density Heatmap"]
 )
 
 with map_tab1:
@@ -351,6 +352,8 @@ with map_tab1:
                 "Member Density", value=False, key="lyr_density")
             show_coverage = st.checkbox(
                 "Coverage Scoring", value=False, key="lyr_coverage")
+            show_heatmap = st.checkbox(
+                "Density Heatmap", value=False, key="lyr_heatmap")
 
     color_by_map = {
         "Area (unique colors)": "area",
@@ -399,6 +402,7 @@ with map_tab1:
         "strength": show_strength,
         "density": show_density,
         "coverage": show_coverage,
+        "heatmap": show_heatmap,
     }
 
     try:
@@ -532,6 +536,27 @@ with map_tab2:
     ).reset_index(drop=True)
     st.dataframe(territory_data, use_container_width=True,
                  hide_index=True)
+
+with map_tab3:
+    # --- Density Heatmap ---
+    st.caption("Member density visualization - brighter = more members")
+
+    # Density KPIs
+    heatmap_summary = get_area_summary(df_filtered)
+    density = compute_density_metrics(df_filtered, heatmap_summary)
+
+    dk1, dk2, dk3, dk4, dk5 = st.columns(5)
+    dk1.metric("Total Members", density["total_members"])
+    dk2.metric("Densest Area", density["densest_area"])
+    dk3.metric("Sparsest Area", density["sparsest_area"])
+    dk4.metric("Density Ratio", f"{density['density_ratio']}x")
+    dk5.metric("Avg per Area", density["avg_density"])
+
+    try:
+        heatmap = build_heatmap_map(df_filtered)
+        st_folium(heatmap, use_container_width=True, height=550, key="heatmap")
+    except Exception as e:
+        st.error(f"Could not render heatmap: {e}")
 
 # --- Area Comparison (Task 4) ---
 st.markdown("---")

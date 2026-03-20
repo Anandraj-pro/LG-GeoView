@@ -4,6 +4,7 @@ import pandas as pd
 
 from src.analytics import (
     compute_coverage_scores,
+    compute_density_metrics,
     compute_kpi_metrics,
     compute_territory_coverage,
     generate_html_report,
@@ -192,14 +193,6 @@ class TestComputeCoverageScores:
 
     def test_green_boundary_at_70(self):
         """Score exactly 70 should be classified as Well Served (green)."""
-        # We need: members_score*0.4 + groups_score*0.4 + avg_score*0.2 = 70
-        # If members=21 -> members_score=min(100,21/30*100)=70
-        # groups=1.4 -> groups_score=min(100,1.4/2*100)=70 (but groups is int)
-        # Let's pick values that give exactly 70:
-        # members=21 -> 70, groups=2 -> 100, avg=0 -> 0
-        # final = 70*0.4 + 100*0.4 + 0*0.2 = 28+40+0 = 68 -- not 70
-        # members=21 -> 70, groups=2 -> 100, avg=2 -> 10
-        # final = 70*0.4 + 100*0.4 + 10*0.2 = 28+40+2 = 70
         summary = self._make_summary([{
             "area": "BoundaryGreen",
             "total_members": 21,
@@ -212,14 +205,6 @@ class TestComputeCoverageScores:
 
     def test_yellow_boundary_at_40(self):
         """Score exactly 40 should be classified as Partial (yellow)."""
-        # members=12 -> 12/30*100 = 40, groups=0 -> 0, avg=0 -> 0
-        # final = 40*0.4 + 0*0.4 + 0*0.2 = 16 -- too low
-        # members=12 -> 40, groups=1 -> 50, avg=12 -> 60
-        # final = 40*0.4 + 50*0.4 + 60*0.2 = 16+20+12 = 48 -- too high
-        # Need exactly 40: try members=12(40), groups=1(50), avg=0(0)
-        # final = 40*0.4 + 50*0.4 + 0*0.2 = 16+20+0 = 36 -- too low
-        # members=15(50), groups=1(50), avg=0(0)
-        # final = 50*0.4 + 50*0.4 + 0*0.2 = 20+20+0 = 40
         summary = self._make_summary([{
             "area": "BoundaryYellow",
             "total_members": 15,
@@ -240,10 +225,6 @@ class TestComputeCoverageScores:
             "avg_members": 5.0,
         }])
         result = compute_coverage_scores(summary)
-        # members_score = 5/30*100 = 16.67
-        # groups_score = 1/2*100 = 50
-        # avg_score = 5/20*100 = 25
-        # final = 16.67*0.4 + 50*0.4 + 25*0.2 = 6.67+20+5 = 31.67
         assert result["coverage_score"].iloc[0] < 40
         assert result["coverage_level"].iloc[0] == "Underserved"
         assert result["coverage_color"].iloc[0] == "#C62828"
@@ -283,9 +264,65 @@ class TestComputeCoverageScores:
             "avg_members": 50.0,
         }])
         result = compute_coverage_scores(summary)
-        # All components capped at 100
-        # final = 100*0.4 + 100*0.4 + 100*0.2 = 100
         assert result["coverage_score"].iloc[0] == 100.0
+
+
+class TestComputeDensityMetrics:
+    """Tests for compute_density_metrics."""
+
+    def test_basic_metrics(self, sample_df):
+        """Should compute correct density metrics from sample data."""
+        from src.data_loader import get_area_summary
+        summary = get_area_summary(sample_df)
+        metrics = compute_density_metrics(sample_df, summary)
+
+        assert metrics["total_members"] == int(sample_df["members"].sum())
+        assert isinstance(metrics["densest_area"], str)
+        assert isinstance(metrics["sparsest_area"], str)
+        assert metrics["density_ratio"] > 0
+        assert metrics["avg_density"] > 0
+
+    def test_densest_and_sparsest(self):
+        """Should identify correct densest and sparsest areas."""
+        df = pd.DataFrame({
+            "members": [10, 50, 5],
+            "area": ["A", "B", "C"],
+        })
+        summary = pd.DataFrame({
+            "area": ["A", "B", "C"],
+            "total_members": [10, 50, 5],
+        })
+        metrics = compute_density_metrics(df, summary)
+        assert metrics["densest_area"] == "B"
+        assert metrics["sparsest_area"] == "C"
+        assert metrics["density_ratio"] == 10.0
+
+    def test_empty_dataframe(self):
+        """Empty DataFrame should return zero metrics."""
+        df = pd.DataFrame(columns=["members", "area"])
+        summary = pd.DataFrame(columns=["area", "total_members"])
+        metrics = compute_density_metrics(df, summary)
+        assert metrics["total_members"] == 0
+        assert metrics["densest_area"] == "N/A"
+        assert metrics["sparsest_area"] == "N/A"
+        assert metrics["density_ratio"] == 0.0
+        assert metrics["avg_density"] == 0.0
+
+    def test_single_area(self):
+        """Single area should have ratio 1.0."""
+        df = pd.DataFrame({
+            "members": [20],
+            "area": ["OnlyArea"],
+        })
+        summary = pd.DataFrame({
+            "area": ["OnlyArea"],
+            "total_members": [20],
+        })
+        metrics = compute_density_metrics(df, summary)
+        assert metrics["densest_area"] == "OnlyArea"
+        assert metrics["sparsest_area"] == "OnlyArea"
+        assert metrics["density_ratio"] == 1.0
+        assert metrics["avg_density"] == 20.0
 
 
 class TestGenerateHtmlReport:

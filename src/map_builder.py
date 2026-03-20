@@ -9,6 +9,7 @@ from xml.sax.saxutils import escape as xml_escape
 
 import folium
 import pandas as pd
+from folium.plugins import HeatMap
 
 from src.analytics import haversine_km
 from src.logger import get_logger
@@ -97,6 +98,54 @@ STRENGTH_GLOW: dict[str, dict[str, str]] = {
     "Medium": {"fill": "#C0A060", "border": "#DAA520", "glow": "rgba(192,160,96,0.30)"},
     "Weak":   {"fill": "#8B6914", "border": "#A0822A", "glow": "rgba(139,105,20,0.20)"},
 }
+
+
+# --- Heatmap gradient ---
+HEATMAP_GRADIENT: dict[float, str] = {
+    0.2: '#2196F3',
+    0.4: '#4CAF50',
+    0.6: '#FFC107',
+    0.8: '#FF9800',
+    1.0: '#F44336',
+}
+
+
+def build_heatmap_layer(df: pd.DataFrame) -> list:
+    """Generate heatmap data from group locations weighted by member count.
+
+    Each group contributes its lat/lng weighted by member count.
+    Returns list of [lat, lng, weight] for Folium HeatMap.
+    """
+    heat_data = []
+    for _, row in df.iterrows():
+        lat = row["latitude"]
+        lng = row["longitude"]
+        members = int(row["members"])
+        heat_data.append([lat, lng, members])
+    return heat_data
+
+
+def build_heatmap_map(df: pd.DataFrame, map_style: str | None = None) -> folium.Map:
+    """Build a map with heatmap overlay showing member density."""
+    center, bounds = _compute_map_bounds()
+
+    m = folium.Map(location=center, zoom_start=DEFAULT_ZOOM, tiles="OpenStreetMap")
+    _apply_fixed_bounds(m, bounds)
+
+    if df.empty:
+        return m
+
+    heat_data = build_heatmap_layer(df)
+    if heat_data:
+        HeatMap(
+            heat_data,
+            min_opacity=0.3,
+            radius=25,
+            blur=20,
+            gradient=HEATMAP_GRADIENT,
+        ).add_to(m)
+
+    return m
 
 
 def build_kingdom_map(
@@ -804,7 +853,7 @@ def build_advanced_territory_map(
         layers = {
             "boundaries": True, "markers": True,
             "gaps": False, "strength": False, "density": False,
-            "coverage": False,
+            "coverage": False, "heatmap": False,
         }
     t0 = time.perf_counter()
     logger.info("Building advanced territory map, color_by=%s", color_by)
@@ -1169,6 +1218,18 @@ def build_advanced_territory_map(
                     f'{grp} groups avg {avg:.0f}</div>'
                     f'</div>'),
                     icon_size=(130, 60), icon_anchor=(65, 30)),
+            ).add_to(m)
+
+    # --- Layer 6: Heatmap ---
+    if layers.get("heatmap", False):
+        heat_data = build_heatmap_layer(nearby_df)
+        if heat_data:
+            HeatMap(
+                heat_data,
+                min_opacity=0.3,
+                radius=25,
+                blur=20,
+                gradient=HEATMAP_GRADIENT,
             ).add_to(m)
 
     # No Folium LayerControl -- layers controlled via Streamlit UI

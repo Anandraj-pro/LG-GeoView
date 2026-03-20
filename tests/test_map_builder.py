@@ -8,6 +8,7 @@ from src.map_builder import (
     GROUP_COLORS,
     build_kingdom_map,
     build_territory_map, build_advanced_territory_map,
+    build_heatmap_layer, build_heatmap_map,
     generate_territory_kml,
     _compute_map_bounds, _apply_fixed_bounds,
     _convex_hull, _cross, _compute_voronoi_boundaries,
@@ -267,7 +268,20 @@ class TestBuildAdvancedTerritoryMap:
         sample_df["strength"] = "Medium"
         summary = self._make_summary(sample_df)
         layers = {"boundaries": True, "markers": False,
-                  "gaps": True, "strength": False, "density": False}
+                  "gaps": True, "strength": False, "density": False,
+                  "heatmap": False}
+        m = build_advanced_territory_map(
+            sample_df, summary, layers=layers)
+        assert isinstance(m, folium.Map)
+
+    def test_heatmap_layer(self, sample_df):
+        """Heatmap layer should work when enabled."""
+        sample_df = sample_df.copy()
+        sample_df["strength"] = "Medium"
+        summary = self._make_summary(sample_df)
+        layers = {"boundaries": True, "markers": True,
+                  "gaps": False, "strength": False, "density": False,
+                  "heatmap": True}
         m = build_advanced_territory_map(
             sample_df, summary, layers=layers)
         assert isinstance(m, folium.Map)
@@ -286,6 +300,64 @@ class TestBuildAdvancedTerritoryMap:
         ])
         m = build_advanced_territory_map(df, summary)
         assert isinstance(m, folium.Map)
+
+
+# ---------------------------------------------------------------------------
+# Heatmap tests
+# ---------------------------------------------------------------------------
+
+
+class TestBuildHeatmapLayer:
+    """Tests for build_heatmap_layer."""
+
+    def test_returns_correct_format(self, sample_df):
+        """Should return list of [lat, lng, weight] lists."""
+        result = build_heatmap_layer(sample_df)
+        assert isinstance(result, list)
+        assert len(result) == len(sample_df)
+        for item in result:
+            assert len(item) == 3
+            assert isinstance(item[0], float)
+            assert isinstance(item[1], float)
+            assert isinstance(item[2], int)
+
+    def test_weights_match_members(self, sample_df):
+        """Weights should match member counts."""
+        result = build_heatmap_layer(sample_df)
+        for i, (_, row) in enumerate(sample_df.iterrows()):
+            assert result[i][2] == int(row["members"])
+
+    def test_empty_dataframe(self):
+        """Empty DataFrame should return empty list."""
+        df = pd.DataFrame(columns=[
+            "latitude", "longitude", "members",
+        ])
+        result = build_heatmap_layer(df)
+        assert result == []
+
+
+class TestBuildHeatmapMap:
+    """Tests for build_heatmap_map."""
+
+    def test_returns_folium_map(self, sample_df):
+        """Should return a folium.Map."""
+        m = build_heatmap_map(sample_df)
+        assert isinstance(m, folium.Map)
+
+    def test_empty_df_returns_map(self):
+        """Empty DataFrame should return valid map without heatmap."""
+        df = pd.DataFrame(columns=[
+            "area", "lg_group", "leader_name", "families",
+            "individuals", "members", "meeting_day",
+            "latitude", "longitude",
+        ])
+        m = build_heatmap_map(df)
+        assert isinstance(m, folium.Map)
+
+    def test_map_has_bounds(self, sample_df):
+        """Heatmap map should have maxBounds set."""
+        m = build_heatmap_map(sample_df)
+        assert "maxBounds" in m.options
 
 
 # ---------------------------------------------------------------------------

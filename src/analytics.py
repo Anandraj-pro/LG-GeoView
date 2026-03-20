@@ -174,6 +174,58 @@ def compute_kpi_metrics(df: pd.DataFrame) -> dict[str, int | float]:
     }
 
 
+def compute_density_metrics(df: pd.DataFrame, summary_df: pd.DataFrame) -> dict:
+    """Compute member density metrics.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Group-level dataframe with 'members' column.
+    summary_df : pd.DataFrame
+        Area-level summary with 'area', 'total_members' columns.
+
+    Returns
+    -------
+    dict with keys:
+        total_members : int -- total across all groups
+        densest_area : str -- area with highest members
+        sparsest_area : str -- area with lowest members
+        density_ratio : float -- densest / sparsest ratio
+        avg_density : float -- average members per area
+    """
+    if df.empty or summary_df.empty:
+        return {
+            "total_members": 0,
+            "densest_area": "N/A",
+            "sparsest_area": "N/A",
+            "density_ratio": 0.0,
+            "avg_density": 0.0,
+        }
+
+    total_members = int(df["members"].sum())
+
+    members_col = pd.to_numeric(summary_df["total_members"], errors="coerce").fillna(0)
+    max_idx = members_col.idxmax()
+    min_idx = members_col.idxmin()
+
+    densest_area = str(summary_df.loc[max_idx, "area"])
+    sparsest_area = str(summary_df.loc[min_idx, "area"])
+
+    max_val = float(members_col.loc[max_idx])
+    min_val = float(members_col.loc[min_idx])
+
+    density_ratio = round(max_val / min_val, 1) if min_val > 0 else 0.0
+    avg_density = round(total_members / len(summary_df), 1)
+
+    return {
+        "total_members": total_members,
+        "densest_area": densest_area,
+        "sparsest_area": sparsest_area,
+        "density_ratio": density_ratio,
+        "avg_density": avg_density,
+    }
+
+
 def generate_html_report(df: pd.DataFrame, summary_df: pd.DataFrame, kpi: dict[str, int | float]) -> str:
     """Generate a printable HTML report.
 
