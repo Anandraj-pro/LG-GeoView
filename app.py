@@ -77,10 +77,25 @@ st.markdown("""
     }
     .stApp > header { background-color: transparent; }
 
-    /* Sidebar */
+    /* Glassmorphism Sidebar */
     [data-testid="stSidebar"] {
-        background: var(--sidebar-bg) !important;
-        border-right: 1px solid var(--border) !important;
+        background: rgba(14,14,22,0.75) !important;
+        backdrop-filter: blur(16px) !important;
+        -webkit-backdrop-filter: blur(16px) !important;
+        border-right: 1px solid rgba(255,255,255,0.06) !important;
+        box-shadow: 4px 0 24px rgba(0,0,0,0.3) !important;
+    }
+    [data-testid="stSidebar"]::before {
+        content: '';
+        position: absolute;
+        top: -50%; left: -50%;
+        width: 200%; height: 200%;
+        background: radial-gradient(circle at 20% 30%,
+                    rgba(99,102,241,0.08) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 70%,
+                    rgba(212,175,55,0.06) 0%, transparent 50%);
+        pointer-events: none;
+        z-index: -1;
     }
     [data-testid="stSidebar"] h1,
     [data-testid="stSidebar"] h2,
@@ -92,6 +107,19 @@ st.markdown("""
     [data-testid="stSidebar"] span,
     [data-testid="stSidebar"] label {
         color: var(--text-muted) !important;
+    }
+    /* Glass effect on sidebar widgets */
+    [data-testid="stSidebar"] [data-testid="stExpander"] {
+        background: rgba(255,255,255,0.03) !important;
+        border: 1px solid rgba(255,255,255,0.06) !important;
+        border-radius: 10px !important;
+        backdrop-filter: blur(8px) !important;
+    }
+    [data-testid="stSidebar"] .stSelectbox,
+    [data-testid="stSidebar"] .stSlider,
+    [data-testid="stSidebar"] .stMultiSelect {
+        background: rgba(255,255,255,0.02) !important;
+        border-radius: 8px !important;
     }
 
     /* Main headings */
