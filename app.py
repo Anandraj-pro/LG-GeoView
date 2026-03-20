@@ -535,16 +535,44 @@ st.markdown("""
         }
     }
 
-    /* Fix Streamlit sidebar icon rendering as text on mobile */
-    [data-testid="stSidebarCollapseButton"] button {
+    /* Fix ALL Streamlit icons that render as text on mobile */
+    /* Sidebar open/close buttons */
+    [data-testid="stSidebarCollapseButton"] button,
+    [data-testid="stSidebarNavCollapseButton"] button,
+    [data-testid="collapsedControl"] button,
+    button[kind="headerNoPadding"] {
         font-size: 0 !important;
+        overflow: hidden !important;
         width: 36px !important;
         height: 36px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
-    [data-testid="stSidebarCollapseButton"] button::after {
-        content: "\\2630";
-        font-size: 20px;
-        color: var(--text-muted);
+    [data-testid="stSidebarCollapseButton"] button::after,
+    [data-testid="stSidebarNavCollapseButton"] button::after,
+    [data-testid="collapsedControl"] button::after,
+    button[kind="headerNoPadding"]::after {
+        content: "\\2630" !important;
+        font-size: 20px !important;
+        color: var(--text-muted) !important;
+    }
+
+    /* Hide broken Material Icons text everywhere */
+    .material-symbols-rounded,
+    .material-icons,
+    span[data-icon] {
+        font-size: 0 !important;
+        overflow: hidden !important;
+    }
+
+    /* Fix expander arrows showing as text */
+    [data-testid="stExpander"] summary span[data-testid="stMarkdownContainer"] {
+        overflow: hidden !important;
+    }
+    [data-testid="stExpander"] svg {
+        width: 16px !important;
+        height: 16px !important;
     }
 
     /* --- Mobile Phone (max 480px) --- */
@@ -565,6 +593,15 @@ st.markdown("""
         [data-testid="column"] {
             min-width: 45% !important;
             flex: 1 1 45% !important;
+        }
+
+        /* Expander — fix arrow overlap on mobile */
+        [data-testid="stExpander"] {
+            margin: 4px 0 !important;
+        }
+        [data-testid="stExpander"] details summary {
+            padding: 8px 12px !important;
+            font-size: 0.85rem !important;
         }
 
         /* Hero banner — compact */
