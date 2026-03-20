@@ -11,9 +11,9 @@ from src.logger import get_logger
 logger = get_logger(__name__)
 
 # Map bounds based on Nehru ORR (Outer Ring Road) west sector
-# Frames: Patancheru(W) to Suchitra(E), Nanakramguda(S) to Bachupally(N)
-ORR_BOUNDS = [[17.4100, 78.2650], [17.5350, 78.4900]]
-HYDERABAD_CENTER = [17.4725, 78.3775]
+# Tighter bounds to prevent showing Dundigal on mobile
+ORR_BOUNDS = [[17.4200, 78.2800], [17.5300, 78.4850]]
+HYDERABAD_CENTER = [17.4750, 78.3825]
 DEFAULT_ZOOM = 12
 
 
@@ -28,11 +28,21 @@ def _compute_map_bounds():
 
 
 def _apply_fixed_bounds(m, bounds):
-    """Lock map strictly to ORR bounds. No fit_bounds."""
-    if bounds:
-        m.options["maxBounds"] = bounds
-        m.options["minZoom"] = 12
-        m.options["maxZoom"] = 18
+    """Lock map strictly to ORR bounds.
+
+    Uses fit_bounds with zero padding to frame exactly,
+    plus maxBounds with viscosity=1.0 for hard pan lock.
+    """
+    if not bounds:
+        return
+
+    # Fit the view to bounds with zero padding
+    m.fit_bounds(bounds, padding=(0, 0))
+    # Hard-lock: can't pan outside
+    m.options["maxBounds"] = bounds
+    m.options["maxBoundsViscosity"] = 1.0
+    m.options["minZoom"] = 12
+    m.options["maxZoom"] = 18
 
 
 # 32 distinct colors — one per care group, no repeats
