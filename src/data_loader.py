@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import json
 import os
 import time
@@ -203,7 +204,12 @@ def load_from_csv(file_path: str = "data/sample_data.csv") -> pd.DataFrame:
     """Load data from a CSV file."""
     t0 = time.perf_counter()
     logger.info("Loading CSV data from %s", file_path)
-    df = pd.read_csv(file_path)
+    try:
+        df = pd.read_csv(file_path)
+    except Exception as e:
+        st.error(f"Failed to load CSV: {e}")
+        logger.error("Failed to load CSV file %s", file_path, exc_info=True)
+        return pd.DataFrame()
     result = _validate_and_clean(df)
     logger.info("CSV load complete: %d rows in %.3fs", len(result), time.perf_counter() - t0)
     return result
@@ -214,10 +220,15 @@ def load_from_upload(uploaded_file) -> pd.DataFrame:
     t0 = time.perf_counter()
     name = uploaded_file.name.lower()
     logger.info("Loading uploaded file: %s", name)
-    if name.endswith(".xlsx") or name.endswith(".xls"):
-        df = pd.read_excel(uploaded_file, sheet_name=0)
-    else:
-        df = pd.read_csv(uploaded_file)
+    try:
+        if name.endswith(".xlsx") or name.endswith(".xls"):
+            df = pd.read_excel(uploaded_file, sheet_name=0)
+        else:
+            df = pd.read_csv(uploaded_file)
+    except Exception as e:
+        st.error(f"Failed to load uploaded file: {e}")
+        logger.error("Failed to load uploaded file %s", name, exc_info=True)
+        return pd.DataFrame()
     result = _validate_and_clean(df)
     logger.info("Upload load complete: %d rows in %.3fs", len(result), time.perf_counter() - t0)
     return result
@@ -225,6 +236,8 @@ def load_from_upload(uploaded_file) -> pd.DataFrame:
 
 def load_from_google_sheets(sheet_url: str) -> pd.DataFrame:
     """Load data from a public Google Sheet (published as CSV)."""
+    import requests as _requests
+
     logger.info("Loading data from Google Sheets")
 
     # Validate URL format
@@ -247,7 +260,9 @@ def load_from_google_sheets(sheet_url: str) -> pd.DataFrame:
             csv_url = sheet_url + "/export?format=csv"
 
         logger.info("Fetching CSV from transformed URL")
-        df = pd.read_csv(csv_url)
+        resp = _requests.get(csv_url, timeout=10)
+        resp.raise_for_status()
+        df = pd.read_csv(io.StringIO(resp.text))
         return _validate_and_clean(df)
     except Exception as e:
         st.error(f"Failed to load Google Sheet: {e}")

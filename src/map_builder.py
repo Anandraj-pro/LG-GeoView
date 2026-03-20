@@ -1,7 +1,9 @@
-"""Map visualization module using Folium (Google Maps-style background)."""
+"""Map visualization module using Folium with legal free tile providers."""
 
 import os
 import time
+from html import escape as html_escape
+from xml.sax.saxutils import escape as xml_escape
 
 import folium
 import pandas as pd
@@ -56,32 +58,41 @@ GROUP_COLORS = [
     "#f39c12", "#d35400",
 ]
 
-# Map tile options
+# Map tile options — legal free tile providers
 MAP_STYLES = {
-    "Google Maps": {
-        "tiles": "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
-        "attr": "Google Maps",
-    },
-    "Google Satellite": {
-        "tiles": "https://mt1.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}",
-        "attr": "Google Satellite",
-    },
-    "Google Terrain": {
-        "tiles": "https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}",
-        "attr": "Google Terrain",
-    },
     "OpenStreetMap": {
         "tiles": "OpenStreetMap",
         "attr": None,
+    },
+    "ESRI Satellite": {
+        "tiles": (
+            "https://server.arcgisonline.com/ArcGIS/rest/services/"
+            "World_Imagery/MapServer/tile/{z}/{y}/{x}"
+        ),
+        "attr": "ESRI",
+    },
+    "Stadia Terrain": {
+        "tiles": (
+            "https://tiles.stadiamaps.com/tiles/"
+            "stamen_terrain/{z}/{x}/{y}{r}.png"
+        ),
+        "attr": "Stadia Maps",
+    },
+    "CartoDB Positron": {
+        "tiles": (
+            "https://{s}.basemaps.cartocdn.com/"
+            "light_all/{z}/{x}/{y}{r}.png"
+        ),
+        "attr": "CartoDB",
     },
 }
 
 
 def build_map(df: pd.DataFrame, map_style: str = None) -> folium.Map:
-    """Build a Folium map with Google Maps background and colored markers."""
+    """Build a Folium map with colored markers."""
     t0 = time.perf_counter()
-    style_key = map_style or "Google Maps"
-    style = MAP_STYLES.get(style_key, MAP_STYLES["Google Maps"])
+    style_key = map_style or "OpenStreetMap"
+    style = MAP_STYLES.get(style_key, MAP_STYLES["OpenStreetMap"])
 
     logger.info("Building overview map with %d markers, style=%s", len(df), style_key)
 
@@ -123,14 +134,19 @@ def build_map(df: pd.DataFrame, map_style: str = None) -> folium.Map:
         group_key = f"{row['leader_name']}_{row['area']}"
         marker_color = group_color_map[group_key]
 
+        # Escaped user data
+        esc_area = html_escape(str(row['area']))
+        esc_leader = html_escape(str(row['leader_name']))
+        esc_meeting = html_escape(str(meeting_day))
+
         # Popup with detailed info
         popup_html = f"""
         <div style="font-family: Arial, sans-serif; min-width: 200px;
              background: white; color: #333; padding: 10px; border-radius: 6px;">
-            <h4 style="margin: 0 0 8px 0; color: #2c3e50;">{row['area']}</h4>
+            <h4 style="margin: 0 0 8px 0; color: #2c3e50;">{esc_area}</h4>
             <table style="font-size: 13px; border-collapse: collapse; color: #333;">
                 <tr><td style="padding: 3px 8px 3px 0; color: #7f8c8d;"><b>Leader</b></td>
-                    <td style="padding: 3px 0; color: #333;">{row['leader_name']}</td></tr>
+                    <td style="padding: 3px 0; color: #333;">{esc_leader}</td></tr>
                 <tr><td style="padding: 3px 8px 3px 0; color: #7f8c8d;"><b>Families</b></td>
                     <td style="padding: 3px 0; color: #333;">{families}</td></tr>
                 <tr><td style="padding: 3px 8px 3px 0; color: #7f8c8d;"><b>Individuals</b></td>
@@ -138,13 +154,15 @@ def build_map(df: pd.DataFrame, map_style: str = None) -> folium.Map:
                 <tr><td style="padding: 3px 8px 3px 0; color: #7f8c8d;"><b>Total</b></td>
                     <td style="padding: 3px 0; color: #333;"><b>{members}</b></td></tr>
                 <tr><td style="padding: 3px 8px 3px 0; color: #7f8c8d;"><b>Meeting</b></td>
-                    <td style="padding: 3px 0; color: #333;">{meeting_day}</td></tr>
+                    <td style="padding: 3px 0; color: #333;">{esc_meeting}</td></tr>
             </table>
         </div>
         """
 
         # Tooltip on hover
-        tooltip_text = f"{row['area']} | {row['leader_name']} | {members} members"
+        tooltip_text = (
+            f"{esc_area} | {esc_leader} | {members} members"
+        )
 
         # Circle marker with unique color per group
         folium.CircleMarker(
@@ -190,8 +208,8 @@ def build_map(df: pd.DataFrame, map_style: str = None) -> folium.Map:
 def build_detailed_map(df: pd.DataFrame, map_style: str = None) -> folium.Map:
     """Build a detailed map with always-visible labels — no hover needed."""
     t0 = time.perf_counter()
-    style_key = map_style or "Google Maps"
-    style = MAP_STYLES.get(style_key, MAP_STYLES["Google Maps"])
+    style_key = map_style or "OpenStreetMap"
+    style = MAP_STYLES.get(style_key, MAP_STYLES["OpenStreetMap"])
 
     logger.info("Building detailed map with %d markers", len(df))
 
@@ -241,6 +259,11 @@ def build_detailed_map(df: pd.DataFrame, map_style: str = None) -> folium.Map:
         marker_color = group_color_map[group_key]
         offset = offsets[idx % len(offsets)]
 
+        # Escaped user data
+        esc_leader = html_escape(str(row['leader_name']))
+        esc_area = html_escape(str(row['area']))
+        esc_meeting = html_escape(str(meeting_day))
+
         # Circle marker (background)
         folium.CircleMarker(
             location=[row["latitude"], row["longitude"]],
@@ -280,10 +303,10 @@ def build_detailed_map(df: pd.DataFrame, map_style: str = None) -> folium.Map:
         ">
             <div style="font-size: 11px; font-weight: bold; color: #222;
                  margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis;">
-                {row['leader_name']}
+                {esc_leader}
             </div>
             <div style="font-size: 10px; color: #666; margin-bottom: 2px;">
-                {row['area']}
+                {esc_area}
             </div>
             <div style="font-size: 10px; color: #333;">
                 <span style="color: {marker_color}; font-weight: bold;">{members}</span> mbrs
@@ -291,7 +314,7 @@ def build_detailed_map(df: pd.DataFrame, map_style: str = None) -> folium.Map:
                 &nbsp;| {individuals} ind
             </div>
             <div style="font-size: 9px; color: #999; margin-top: 1px;">
-                {meeting_day}
+                {esc_meeting}
             </div>
         </div>
         """
@@ -321,7 +344,9 @@ def _add_legend(m: folium.Map, group_color_map: dict, df: pd.DataFrame):
             continue
         seen.add(group_key)
         color = group_color_map[group_key]
-        label = f"{row['leader_name']} — {row['area']}"
+        esc_leader = html_escape(str(row['leader_name']))
+        esc_area = html_escape(str(row['area']))
+        label = f"{esc_leader} &mdash; {esc_area}"
         legend_items += (
             f'<span style="color: {color}; font-size: 16px;">&#9679;</span> '
             f'<span style="color: #333; font-size: 11px;">{label}</span><br>\n'
@@ -412,6 +437,8 @@ def build_kingdom_map(df: pd.DataFrame, summary_df: pd.DataFrame,
             weight=1,
         ).add_to(m)
 
+        esc_area_name = html_escape(str(area_row['area']))
+
         # Area territory label
         territory_html = f"""
         <div style="
@@ -425,7 +452,7 @@ def build_kingdom_map(df: pd.DataFrame, summary_df: pd.DataFrame,
             text-align: center;
             white-space: nowrap;
             pointer-events: none;
-        ">{area_row['area']}</div>
+        ">{esc_area_name}</div>
         """
         folium.Marker(
             location=[area_row["latitude"] + 0.006, area_row["longitude"]],
@@ -464,6 +491,11 @@ def build_kingdom_map(df: pd.DataFrame, summary_df: pd.DataFrame,
         strength = row.get("strength", "Weak")
         colors = STRENGTH_GLOW.get(strength, STRENGTH_GLOW["Weak"])
 
+        # Escaped user data
+        esc_area = html_escape(str(row['area']))
+        esc_leader = html_escape(str(row['leader_name']))
+        esc_meeting = html_escape(str(row.get('meeting_day', '')))
+
         # Golden marker circle
         folium.CircleMarker(
             location=[row["latitude"], row["longitude"]],
@@ -495,11 +527,11 @@ def build_kingdom_map(df: pd.DataFrame, summary_df: pd.DataFrame,
             <div style="font-size: 14px; font-weight: bold; color: #8B6914;
                  letter-spacing: 1px; margin-bottom: 6px;
                  border-bottom: 1px solid #D4AF3744; padding-bottom: 6px;">
-                {row['area']}
+                {esc_area}
             </div>
             <table style="font-size: 12px; border-collapse: collapse; width: 100%;">
                 <tr><td style="color: #8B7355; padding: 2px 0;">Shepherd</td>
-                    <td style="color: #5D4E37; text-align: right;">{row['leader_name']}</td></tr>
+                    <td style="color: #5D4E37; text-align: right;">{esc_leader}</td></tr>
                 <tr><td style="color: #8B7355; padding: 2px 0;">Families</td>
                     <td style="color: #5D4E37; text-align: right;">{int(row.get('families', 0))}</td></tr>
                 <tr><td style="color: #8B7355; padding: 2px 0;">Individuals</td>
@@ -507,7 +539,7 @@ def build_kingdom_map(df: pd.DataFrame, summary_df: pd.DataFrame,
                 <tr><td style="color: #8B7355; padding: 2px 0;">Total Souls</td>
                     <td style="color: #8B6914; font-weight: bold; text-align: right;">{members}</td></tr>
                 <tr><td style="color: #8B7355; padding: 2px 0;">Gathering</td>
-                    <td style="color: #5D4E37; text-align: right;">{row.get('meeting_day', '')}</td></tr>
+                    <td style="color: #5D4E37; text-align: right;">{esc_meeting}</td></tr>
             </table>
         </div>
         """
@@ -517,7 +549,7 @@ def build_kingdom_map(df: pd.DataFrame, summary_df: pd.DataFrame,
             color="transparent",
             fill=False,
             popup=folium.Popup(popup_html, max_width=220),
-            tooltip=f"{row['leader_name']} \u2014 {members} souls",
+            tooltip=f"{esc_leader} \u2014 {members} souls",
         ).add_to(m)
 
     # --- Kingdom legend ---
@@ -603,7 +635,7 @@ def _add_kingdom_legend(m: folium.Map, summary_df: pd.DataFrame):
     m.get_root().html.add_child(folium.Element(legend_html))
 
 
-# --- Territory Fill Colors (Google Maps style) ---
+# --- Territory Fill Colors ---
 TERRITORY_PALETTE = [
     {"fill": "#4CAF50", "border": "#2E7D32"},    # green
     {"fill": "#2196F3", "border": "#1565C0"},     # blue
@@ -709,11 +741,27 @@ def _compute_voronoi_boundaries(centers, bbox, grid_size=60):
     return boundaries
 
 
+def _load_ward_data():
+    """Load ward boundary polygons and area-to-ward mapping."""
+    import json as _json
+    base = os.path.dirname(os.path.dirname(__file__))
+    bnd_path = os.path.join(base, "data", "ward_boundaries.json")
+    map_path = os.path.join(base, "data", "area_ward_mapping.json")
+    try:
+        with open(bnd_path) as f:
+            boundaries = _json.load(f)
+        with open(map_path) as f:
+            mapping = _json.load(f)
+        return boundaries, mapping
+    except (FileNotFoundError, ValueError) as e:
+        logger.warning("Ward boundary data not found: %s", e)
+        return {}, {}
+
+
 def build_territory_map(df: pd.DataFrame, summary_df: pd.DataFrame,
                         center_area: str = "Kukatpally",
                         radius: float = KUKATPALLY_RADIUS) -> folium.Map:
-    """Build a Google Maps-style territory map with colored polygon
-    boundaries for each area — filled regions with bold borders."""
+    """Build a territory map with colored polygon boundaries for each area."""
     t0 = time.perf_counter()
     logger.info("Building territory map centered on %s", center_area)
 
@@ -732,16 +780,15 @@ def build_territory_map(df: pd.DataFrame, summary_df: pd.DataFrame,
 
     _, map_bounds = _compute_map_bounds()
 
-    # Google Maps style — standard road map
+    # OpenStreetMap as default base layer
     m = folium.Map(
         location=center_coords,
         zoom_start=14,
         tiles=None,
     )
     folium.TileLayer(
-        tiles="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
-        attr="Google Maps",
-        name="Google Maps",
+        tiles="OpenStreetMap",
+        name="OpenStreetMap",
         control=False,
     ).add_to(m)
 
@@ -785,21 +832,21 @@ def build_territory_map(df: pd.DataFrame, summary_df: pd.DataFrame,
     for _, srow in summary_df.iterrows():
         summary_lookup[srow["area"].lower().strip()] = srow
 
-    # Draw territory polygons — like Google Maps colored regions
+    # Draw territory polygons
     for idx, boundary in boundaries.items():
         if len(boundary) < 3:
             continue
         name = area_names[idx]
         colors = area_color_map[name]
         is_occupied = name in occupied_areas
-        display = name.title()
+        display = html_escape(name.title())
         srow = summary_lookup.get(name)
 
         # Build popup
         if srow is not None:
             groups = int(srow["total_groups"])
             members = int(srow["total_members"])
-            strength = srow.get("strength", "")
+            strength = html_escape(str(srow.get("strength", "")))
             popup_text = (
                 f'<div style="font-family: Arial, sans-serif;'
                 f' padding: 8px; min-width: 150px;">'
@@ -866,16 +913,20 @@ def build_territory_map(df: pd.DataFrame, summary_df: pd.DataFrame,
         individuals = int(row.get("individuals", 0))
         meeting_day = row.get("meeting_day", "")
 
+        esc_leader = html_escape(str(row["leader_name"]))
+        esc_area = html_escape(str(row["area"]))
+        esc_meeting = html_escape(str(meeting_day))
+
         popup_html = (
             f'<div style="font-family: Arial, sans-serif;'
             f' padding: 8px; min-width: 160px;">'
-            f'<b>{row["leader_name"]}</b>'
-            f' — {row["area"]}<hr style="margin: 4px 0;">'
+            f'<b>{esc_leader}</b>'
+            f' &mdash; {esc_area}<hr style="margin: 4px 0;">'
             f'<div style="font-size: 12px;">'
             f'Families: {families}<br>'
             f'Individuals: {individuals}<br>'
             f'Total: <b>{members}</b><br>'
-            f'Meeting: {meeting_day}</div></div>'
+            f'Meeting: {esc_meeting}</div></div>'
         )
 
         folium.CircleMarker(
@@ -888,7 +939,7 @@ def build_territory_map(df: pd.DataFrame, summary_df: pd.DataFrame,
             weight=2,
             popup=folium.Popup(popup_html, max_width=200),
             tooltip=(
-                f"{row['leader_name']} \u2014 {members} members"
+                f"{esc_leader} \u2014 {members} members"
             ),
         ).add_to(m)
 
@@ -917,12 +968,12 @@ def build_territory_map(df: pd.DataFrame, summary_df: pd.DataFrame,
 
 def _add_territory_legend(m, area_color_map, area_names,
                           summary_lookup, occupied_areas, center_area):
-    """Add Google Maps-style territory legend."""
+    """Add territory legend."""
     items_html = ""
     for name in sorted(area_names):
         colors = area_color_map[name]
         is_occ = name in occupied_areas
-        display = name.title()
+        display = html_escape(name.title())
         srow = summary_lookup.get(name)
         if srow is not None:
             members = int(srow["total_members"])
@@ -949,6 +1000,7 @@ def _add_territory_legend(m, area_color_map, area_names,
 
     occ_count = sum(1 for n in area_names if n in occupied_areas)
     total_count = len(area_names)
+    esc_center = html_escape(center_area.title())
 
     legend_html = f"""
     <div style="
@@ -964,7 +1016,7 @@ def _add_territory_legend(m, area_color_map, area_names,
         <div style="font-size: 14px; font-weight: bold;
              margin-bottom: 10px; border-bottom: 1px solid #eee;
              padding-bottom: 8px;">
-            {center_area.title()} Region
+            {esc_center} Region
         </div>
         {items_html}
         <div style="border-top: 1px solid #eee; padding-top: 8px;
@@ -983,23 +1035,6 @@ STRENGTH_TERRITORY = {
     "Medium": {"fill": "#F9A825", "border": "#F57F17"},
     "Weak":   {"fill": "#C62828", "border": "#B71C1C"},
 }
-
-
-def _load_ward_data():
-    """Load ward boundary polygons and area-to-ward mapping."""
-    import json as _json
-    base = os.path.dirname(os.path.dirname(__file__))
-    bnd_path = os.path.join(base, "data", "ward_boundaries.json")
-    map_path = os.path.join(base, "data", "area_ward_mapping.json")
-    try:
-        with open(bnd_path) as f:
-            boundaries = _json.load(f)
-        with open(map_path) as f:
-            mapping = _json.load(f)
-        return boundaries, mapping
-    except (FileNotFoundError, ValueError) as e:
-        logger.warning("Ward boundary data not found: %s", e)
-        return {}, {}
 
 
 def build_advanced_territory_map(
@@ -1042,9 +1077,8 @@ def build_advanced_territory_map(
         tiles=None,
     )
     folium.TileLayer(
-        tiles="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
-        attr="Google Maps",
-        name="Google Maps",
+        tiles="OpenStreetMap",
+        name="OpenStreetMap",
         control=False,
     ).add_to(m)
 
@@ -1141,15 +1175,18 @@ def build_advanced_territory_map(
                 area_list.append(a.title())
 
         avg = total_mem / total_grp if total_grp > 0 else 0
-        display = ward_name.replace("Ward ", "")
+        display = html_escape(ward_name.replace("Ward ", ""))
+        esc_ward = html_escape(ward_name)
 
         if has_groups:
-            areas_str = ", ".join(area_list) if area_list else "—"
+            areas_str = html_escape(
+                ", ".join(area_list) if area_list else "\u2014"
+            )
             popup_t = (
                 f'<div style="font-family:Arial;padding:10px;'
                 f'min-width:200px;">'
                 f'<b style="font-size:14px;color:'
-                f'{colors["border"]};">{ward_name}</b>'
+                f'{colors["border"]};">{esc_ward}</b>'
                 f'<hr style="margin:6px 0;">'
                 f'<div style="font-size:11px;color:#666;'
                 f'margin-bottom:6px;">Areas: {areas_str}</div>'
@@ -1164,7 +1201,7 @@ def build_advanced_territory_map(
         else:
             popup_t = (
                 f'<div style="font-family:Arial;padding:10px;">'
-                f'<b style="font-size:14px;">{ward_name}</b><br>'
+                f'<b style="font-size:14px;">{esc_ward}</b><br>'
                 f'<span style="color:#e74c3c;font-weight:bold;">'
                 f'No groups \u2014 expansion zone</span></div>')
 
@@ -1175,7 +1212,7 @@ def build_advanced_territory_map(
             fill_opacity=0.40 if has_groups else 0.10,
             weight=3,
             popup=folium.Popup(popup_t, max_width=280),
-            tooltip=ward_name,
+            tooltip=esc_ward,
         ).add_to(t_layer)
 
         # Ward label at centroid
@@ -1212,18 +1249,24 @@ def build_advanced_territory_map(
             mem = int(row["members"])
             akey = row["area"].lower().strip()
             colors = area_color_map.get(akey, TERRITORY_PALETTE[0])
+
+            esc_leader = html_escape(str(row["leader_name"]))
+            esc_area = html_escape(str(row["area"]))
+            esc_meeting = html_escape(str(row.get("meeting_day", "")))
+            esc_strength = html_escape(str(row.get("strength", "")))
+
             popup_html = (
                 f'<div style="font-family:Arial;padding:8px;'
                 f'min-width:150px;">'
                 f'<b style="color:{colors["border"]};">'
-                f'{row["leader_name"]}</b>'
-                f' ({row["area"]})<hr style="margin:4px 0;">'
+                f'{esc_leader}</b>'
+                f' ({esc_area})<hr style="margin:4px 0;">'
                 f'<div style="font-size:12px;">'
                 f'Families: {int(row.get("families", 0))}<br>'
                 f'Individuals: {int(row.get("individuals", 0))}<br>'
                 f'Total: <b>{mem}</b><br>'
-                f'Meeting: {row.get("meeting_day", "")}<br>'
-                f'Strength: {row.get("strength", "")}'
+                f'Meeting: {esc_meeting}<br>'
+                f'Strength: {esc_strength}'
                 f'</div></div>')
             folium.CircleMarker(
                 location=[row["latitude"], row["longitude"]],
@@ -1233,7 +1276,7 @@ def build_advanced_territory_map(
                 fill_opacity=0.9, weight=2,
                 popup=folium.Popup(popup_html, max_width=200),
                 tooltip=(
-                    f"{row['leader_name']} \u2014 {mem} members"
+                    f"{esc_leader} \u2014 {mem} members"
                 ),
             ).add_to(m)
     # --- Layer 3: Gap Analysis ---
@@ -1242,7 +1285,7 @@ def build_advanced_territory_map(
             if name in occupied:
                 continue
             coords = nearby[name]
-            display = name.title()
+            display = html_escape(name.title())
             folium.CircleMarker(
                 location=coords, radius=20, color="#e74c3c",
                 fill=True, fill_color="#e74c3c",
@@ -1301,6 +1344,7 @@ def build_advanced_territory_map(
             mem = int(srow["total_members"])
             grp = int(srow["total_groups"])
             avg = mem / grp if grp > 0 else 0
+            esc_name = html_escape(name.title())
             folium.Marker(
                 location=[coords[0] - 0.001, coords[1]],
                 icon=folium.DivIcon(html=(
@@ -1310,7 +1354,7 @@ def build_advanced_territory_map(
                     f'rgba(0,0,0,0.2);text-align:center;'
                     f'pointer-events:none;">'
                     f'<div style="font-size:11px;font-weight:bold;'
-                    f'color:#333;">{name.title()}</div>'
+                    f'color:#333;">{esc_name}</div>'
                     f'<div style="font-size:18px;font-weight:bold;'
                     f'color:#2E7D32;">{mem}</div>'
                     f'<div style="font-size:9px;color:#888;">'
@@ -1359,6 +1403,7 @@ def _add_advanced_legend(m, color_by, area_names, occupied, center_area):
     occ = sum(1 for n in area_names if n in occupied)
     total = len(area_names)
     gap = total - occ
+    esc_center = html_escape(center_area.title())
 
     if color_by == "strength":
         mode_items = (
@@ -1411,7 +1456,7 @@ def _add_advanced_legend(m, color_by, area_names, occupied, center_area):
         min-width:160px;max-width:200px;">
         <div style="font-size:13px;font-weight:bold;
              margin-bottom:8px;border-bottom:1px solid #eee;
-             padding-bottom:6px;">{center_area.title()} Region</div>
+             padding-bottom:6px;">{esc_center} Region</div>
         {mode_items}
         <div style="margin-top:6px;padding-top:6px;
              border-top:1px solid #eee;">
@@ -1438,10 +1483,10 @@ def generate_territory_kml(df, summary_df):
         '<name>LG GeoView Territories</name>',
     ]
     for _, row in summary_df.iterrows():
-        area = row["area"]
+        area = xml_escape(str(row["area"]))
         mem = int(row["total_members"])
         grp = int(row["total_groups"])
-        st = row.get("strength", "")
+        st = xml_escape(str(row.get("strength", "")))
         lines.append('<Placemark>')
         lines.append(f'<name>{area}</name>')
         lines.append(
@@ -1452,9 +1497,11 @@ def generate_territory_kml(df, summary_df):
             f'{row["latitude"]},0</coordinates></Point>')
         lines.append('</Placemark>')
     for _, row in df.iterrows():
+        esc_leader = xml_escape(str(row["leader_name"]))
+        esc_area = xml_escape(str(row["area"]))
         lines.append('<Placemark>')
         lines.append(
-            f'<name>{row["leader_name"]} - {row["area"]}</name>')
+            f'<name>{esc_leader} - {esc_area}</name>')
         lines.append(
             f'<description>{int(row["members"])}'
             f' members</description>')

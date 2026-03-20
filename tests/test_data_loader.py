@@ -2,7 +2,7 @@
 
 import io
 import os
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pandas as pd
 
@@ -33,6 +33,13 @@ class TestLoadFromCSV:
         assert len(df) == 20
         for col in ["area", "lg_group", "leader_name", "members", "latitude", "longitude"]:
             assert col in df.columns
+
+    @patch("src.data_loader.st")
+    def test_load_from_csv_exception(self, mock_st):
+        """Exception during CSV read should return empty DataFrame."""
+        df = load_from_csv("/nonexistent/path/to/file.csv")
+        assert df.empty
+        mock_st.error.assert_called_once()
 
 
 class TestValidateAndClean:
@@ -106,7 +113,6 @@ class TestGetAreaSummary:
 
     def test_get_area_summary_empty(self, empty_df):
         """Empty DataFrame should produce an empty summary."""
-        # Add required columns for groupby to not crash
         empty = pd.DataFrame(columns=[
             "area", "lg_group", "leader_name", "families", "individuals",
             "members", "meeting_day", "latitude", "longitude",
@@ -152,12 +158,12 @@ class TestLoadFromExcel:
         })
         mock_read_excel.return_value = mock_data
         df = load_from_excel("fake.xlsx")
-        assert len(df) == 2  # Both rows should load (both areas have coords)
+        assert len(df) == 2
 
     @patch("src.data_loader.st")
     @patch("src.data_loader.pd.read_excel")
     def test_load_from_excel_shifted_columns(self, mock_read_excel, mock_st):
-        """Test the shifted column handling where area has leader, Care Coordinator has area."""
+        """Test the shifted column handling."""
         mock_data = pd.DataFrame({
             ",leader_name,": [None, None],
             "area": ["Leader Name1", "Leader Name2"],
@@ -169,7 +175,6 @@ class TestLoadFromExcel:
         })
         mock_read_excel.return_value = mock_data
         df = load_from_excel("fake.xlsx")
-        # Should use area column as leader, Care Coordinator as area
         assert not df.empty
 
     @patch("src.data_loader.st")
@@ -187,7 +192,7 @@ class TestLoadFromExcel:
         })
         mock_read_excel.return_value = mock_data
         df = load_from_excel("fake.xlsx")
-        assert len(df) == 1  # Total row should be skipped
+        assert len(df) == 1
 
     @patch("src.data_loader.st")
     @patch("src.data_loader.pd.read_excel")
@@ -204,7 +209,7 @@ class TestLoadFromExcel:
         })
         mock_read_excel.return_value = mock_data
         df = load_from_excel("fake.xlsx")
-        assert df.empty  # No valid coords -> dropped
+        assert df.empty
         mock_st.warning.assert_called_once()
 
     @patch("src.data_loader.st")
@@ -231,7 +236,7 @@ class TestLoadFromExcel:
         })
         mock_read_excel.return_value = mock_data
         df = load_from_excel("fake.xlsx")
-        assert len(df) == 1  # First row skipped (both empty)
+        assert len(df) == 1
 
 
 # ---------------------------------------------------------------------------
@@ -243,48 +248,74 @@ class TestLoadFromGoogleSheets:
     """Tests for load_from_google_sheets."""
 
     @patch("src.data_loader.st")
-    @patch("src.data_loader.pd.read_csv")
-    def test_google_sheets_edit_url(self, mock_read_csv, mock_st):
+    @patch("requests.get")
+    def test_google_sheets_edit_url(self, mock_get, mock_st):
         """URL with /edit should be converted to /export?format=csv."""
-        mock_read_csv.return_value = pd.DataFrame({
-            "area": ["Kukatpally"], "lg_group": ["LG1"],
-            "leader_name": ["Ravi"], "members": [10],
-            "latitude": [17.49], "longitude": [78.40],
-        })
-        df = load_from_google_sheets("https://docs.google.com/spreadsheets/d/xxx/edit")
-        mock_read_csv.assert_called_once_with("https://docs.google.com/spreadsheets/d/xxx/export?format=csv")
+        csv_text = (
+            "area,lg_group,leader_name,members,latitude,longitude\n"
+            "Kukatpally,LG1,Ravi,10,17.49,78.40"
+        )
+        mock_resp = MagicMock()
+        mock_resp.text = csv_text
+        mock_resp.raise_for_status = MagicMock()
+        mock_get.return_value = mock_resp
+        df = load_from_google_sheets(
+            "https://docs.google.com/spreadsheets/d/xxx/edit"
+        )
+        mock_get.assert_called_once_with(
+            "https://docs.google.com/spreadsheets/d/xxx/export?format=csv",
+            timeout=10,
+        )
         assert not df.empty
 
     @patch("src.data_loader.st")
-    @patch("src.data_loader.pd.read_csv")
-    def test_google_sheets_pub_url(self, mock_read_csv, mock_st):
+    @patch("requests.get")
+    def test_google_sheets_pub_url(self, mock_get, mock_st):
         """URL with /pub should be used as-is."""
-        mock_read_csv.return_value = pd.DataFrame({
-            "area": ["Kukatpally"], "lg_group": ["LG1"],
-            "leader_name": ["Ravi"], "members": [10],
-            "latitude": [17.49], "longitude": [78.40],
-        })
-        load_from_google_sheets("https://docs.google.com/spreadsheets/d/xxx/pub")
-        mock_read_csv.assert_called_once_with("https://docs.google.com/spreadsheets/d/xxx/pub")
+        csv_text = (
+            "area,lg_group,leader_name,members,latitude,longitude\n"
+            "Kukatpally,LG1,Ravi,10,17.49,78.40"
+        )
+        mock_resp = MagicMock()
+        mock_resp.text = csv_text
+        mock_resp.raise_for_status = MagicMock()
+        mock_get.return_value = mock_resp
+        load_from_google_sheets(
+            "https://docs.google.com/spreadsheets/d/xxx/pub"
+        )
+        mock_get.assert_called_once_with(
+            "https://docs.google.com/spreadsheets/d/xxx/pub",
+            timeout=10,
+        )
 
     @patch("src.data_loader.st")
-    @patch("src.data_loader.pd.read_csv")
-    def test_google_sheets_plain_url(self, mock_read_csv, mock_st):
+    @patch("requests.get")
+    def test_google_sheets_plain_url(self, mock_get, mock_st):
         """URL without /edit or /pub should get /export?format=csv appended."""
-        mock_read_csv.return_value = pd.DataFrame({
-            "area": ["Kukatpally"], "lg_group": ["LG1"],
-            "leader_name": ["Ravi"], "members": [10],
-            "latitude": [17.49], "longitude": [78.40],
-        })
-        load_from_google_sheets("https://docs.google.com/spreadsheets/d/xxx")
-        mock_read_csv.assert_called_once_with("https://docs.google.com/spreadsheets/d/xxx/export?format=csv")
+        csv_text = (
+            "area,lg_group,leader_name,members,latitude,longitude\n"
+            "Kukatpally,LG1,Ravi,10,17.49,78.40"
+        )
+        mock_resp = MagicMock()
+        mock_resp.text = csv_text
+        mock_resp.raise_for_status = MagicMock()
+        mock_get.return_value = mock_resp
+        load_from_google_sheets(
+            "https://docs.google.com/spreadsheets/d/xxx"
+        )
+        mock_get.assert_called_once_with(
+            "https://docs.google.com/spreadsheets/d/xxx/export?format=csv",
+            timeout=10,
+        )
 
     @patch("src.data_loader.st")
-    @patch("src.data_loader.pd.read_csv")
-    def test_google_sheets_exception(self, mock_read_csv, mock_st):
+    @patch("requests.get")
+    def test_google_sheets_exception(self, mock_get, mock_st):
         """Network error should return empty DataFrame."""
-        mock_read_csv.side_effect = Exception("Connection timeout")
-        df = load_from_google_sheets("https://docs.google.com/spreadsheets/d/xxx/edit")
+        mock_get.side_effect = Exception("Connection timeout")
+        df = load_from_google_sheets(
+            "https://docs.google.com/spreadsheets/d/xxx/edit"
+        )
         assert df.empty
         mock_st.error.assert_called_once()
 
@@ -300,7 +331,10 @@ class TestLoadFromUpload:
     @patch("src.data_loader.st")
     def test_load_from_upload_csv(self, mock_st):
         """Uploading a CSV file should parse correctly."""
-        csv_content = "area,lg_group,leader_name,members,latitude,longitude\nKukatpally,LG1,Ravi,10,17.49,78.40"
+        csv_content = (
+            "area,lg_group,leader_name,members,latitude,longitude\n"
+            "Kukatpally,LG1,Ravi,10,17.49,78.40"
+        )
         uploaded = io.BytesIO(csv_content.encode())
         uploaded.name = "test.csv"
         df = load_from_upload(uploaded)
@@ -320,6 +354,16 @@ class TestLoadFromUpload:
         uploaded.name = "test.xlsx"
         df = load_from_upload(uploaded)
         assert not df.empty
+
+    @patch("src.data_loader.st")
+    def test_load_from_upload_exception(self, mock_st):
+        """Exception during upload read should return empty DataFrame."""
+        uploaded = MagicMock()
+        uploaded.name = "test.xlsx"
+        with patch("src.data_loader.pd.read_excel", side_effect=Exception("Bad file")):
+            df = load_from_upload(uploaded)
+            assert df.empty
+            mock_st.error.assert_called_once()
 
 
 # ---------------------------------------------------------------------------

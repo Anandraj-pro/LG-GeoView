@@ -7,7 +7,7 @@ from streamlit_folium import st_folium
 from src.data_loader import (
     load_from_excel, load_from_csv, load_from_upload,
     load_from_google_sheets, assign_strength, get_area_summary,
-    validate_data_quality,
+    validate_data_quality, AREA_COORDINATES,
 )
 from src.map_builder import (
     build_kingdom_map, build_advanced_territory_map,
@@ -18,6 +18,7 @@ from src.charts import (  # noqa: F401
     area_detail_table, meeting_day_chart, top_bottom_groups_chart,
     leader_members_chart,
 )
+from src.analytics import compute_kpi_metrics, compute_territory_coverage
 
 # --- Page Config ---
 st.set_page_config(
@@ -984,15 +985,8 @@ if df_filtered.empty:
     st.warning("No data available. Please check your data source.")
     st.stop()
 
-# --- Kingdom Banner ---
-total_groups = len(df_filtered)
-total_families = int(df_filtered["families"].sum())
-total_individuals = int(df_filtered["individuals"].sum())
-total_members = int(df_filtered["members"].sum())
-num_areas = df_filtered["area"].nunique()
-avg_per_group = total_members / total_groups if total_groups > 0 else 0
-strong_count = len(df_filtered[df_filtered["strength"] == "Strong"])
-weak_count = len(df_filtered[df_filtered["strength"] == "Weak"])
+# --- Kingdom Banner (KPIs via analytics module) ---
+kpi = compute_kpi_metrics(df_filtered)
 
 hero_html = f"""<div class="hero-banner">\
 <div class="hero-shape hero-shape-1"></div>\
@@ -1016,27 +1010,27 @@ hero_html = f"""<div class="hero-banner">\
 <div class="hero-kpis">\
 <div class="hero-kpi">\
 <div class="hero-kpi-icon">&#x25A0;</div>\
-<div class="hero-kpi-value">{num_areas}</div>\
+<div class="hero-kpi-value">{kpi["num_areas"]}</div>\
 <div class="hero-kpi-label">Territories</div>\
 </div>\
 <div class="hero-kpi">\
 <div class="hero-kpi-icon">&#x2666;</div>\
-<div class="hero-kpi-value">{total_groups}</div>\
+<div class="hero-kpi-value">{kpi["total_groups"]}</div>\
 <div class="hero-kpi-label">Shepherds</div>\
 </div>\
 <div class="hero-kpi">\
 <div class="hero-kpi-icon">&#x2022;</div>\
-<div class="hero-kpi-value">{total_members}</div>\
+<div class="hero-kpi-value">{kpi["total_members"]}</div>\
 <div class="hero-kpi-label">Souls Gathered</div>\
 </div>\
 <div class="hero-kpi">\
 <div class="hero-kpi-icon">&#x2605;</div>\
-<div class="hero-kpi-value">{strong_count}</div>\
+<div class="hero-kpi-value">{kpi["strong_count"]}</div>\
 <div class="hero-kpi-label">Strong Groups</div>\
 </div>\
 <div class="hero-kpi">\
 <div class="hero-kpi-icon">&#x25CB;</div>\
-<div class="hero-kpi-value">{weak_count}</div>\
+<div class="hero-kpi-value">{kpi["weak_count"]}</div>\
 <div class="hero-kpi-label">Emerging</div>\
 </div>\
 </div>\
@@ -1075,19 +1069,14 @@ with map_tab1:
 
     territory_summary = get_area_summary(df_filtered)
 
-    # Territory coverage KPIs
-    from src.data_loader import AREA_COORDINATES
-    nearby_set = set()
-    ck = focus_area.lower().strip()
-    cc = AREA_COORDINATES.get(ck, [17.4948, 78.3996])
-    for an, ac in AREA_COORDINATES.items():
-        dist = ((ac[0] - cc[0])**2 + (ac[1] - cc[1])**2)**0.5
-        if dist <= territory_radius * 0.01:
-            nearby_set.add(an)
+    # Territory coverage KPIs (via analytics module)
     occ_set = set(df_filtered["area"].str.lower().str.strip().unique())
-    occupied_count = sum(1 for n in nearby_set if n in occ_set)
-    total_nearby = len(nearby_set)
-    uncovered = [n.title() for n in nearby_set if n not in occ_set]
+    coverage = compute_territory_coverage(
+        focus_area, territory_radius, AREA_COORDINATES, occ_set,
+    )
+    occupied_count = coverage["occupied_count"]
+    total_nearby = coverage["total_nearby"]
+    uncovered = coverage["uncovered"]
 
     tk1, tk2, tk3 = st.columns(3)
     tk1.metric("Occupied", f"{occupied_count}/{total_nearby}")
