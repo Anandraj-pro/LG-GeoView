@@ -10,40 +10,28 @@ from src.logger import get_logger
 
 logger = get_logger(__name__)
 
-# Hyderabad West center
-HYDERABAD_CENTER = [17.4775, 78.3800]
+# Map bounds based on Nehru ORR (Outer Ring Road) west sector
+# Frames: Patancheru(W) to Suchitra(E), Nanakramguda(S) to Bachupally(N)
+ORR_BOUNDS = [[17.4100, 78.2650], [17.5350, 78.4900]]
+HYDERABAD_CENTER = [17.4725, 78.3775]
 DEFAULT_ZOOM = 12
 
 
 def _compute_map_bounds():
-    """Compute tight map bounds from area coordinates.
+    """Return fixed ORR-based bounds for the ministry area.
 
-    Asymmetric padding: tight north (0.005) to avoid showing Dundigal,
-    normal padding elsewhere (0.012). Auto-expands for new areas.
-    Returns (center, bounds) where bounds = [[south, west], [north, east]].
+    Uses hard-coded Nehru ORR bounds instead of auto-calculating
+    from coordinates, ensuring consistent framing on all devices.
+    New areas within ORR are automatically visible.
     """
-    from src.data_loader import AREA_COORDINATES
-    if not AREA_COORDINATES:
-        return HYDERABAD_CENTER, None
-
-    lats = [c[0] for c in AREA_COORDINATES.values()]
-    lngs = [c[1] for c in AREA_COORDINATES.values()]
-
-    south = min(lats) - 0.012
-    north = max(lats) + 0.005   # tight north — Gandimaisamma, not Dundigal
-    west = min(lngs) - 0.012
-    east = max(lngs) + 0.012
-
-    center = [(south + north) / 2, (west + east) / 2]
-    bounds = [[south, west], [north, east]]
-    return center, bounds
+    return HYDERABAD_CENTER, ORR_BOUNDS
 
 
 def _apply_fixed_bounds(m, bounds):
-    """Lock map to fixed bounds. No fit_bounds (it adds extra padding)."""
+    """Lock map strictly to ORR bounds. No fit_bounds."""
     if bounds:
         m.options["maxBounds"] = bounds
-        m.options["minZoom"] = 11
+        m.options["minZoom"] = 12
         m.options["maxZoom"] = 18
 
 

@@ -228,7 +228,7 @@ class TestApplyFixedBounds:
         bounds = [[17.42, 78.26], [17.54, 78.51]]
         _apply_fixed_bounds(m, bounds)
         assert m.options["maxBounds"] == bounds
-        assert m.options["minZoom"] == 11
+        assert m.options["minZoom"] == 12
 
     def test_none_bounds_does_nothing(self):
         """None bounds should not crash."""
