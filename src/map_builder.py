@@ -1556,28 +1556,41 @@ def build_coverage_overview_map(zone_summary: "pd.DataFrame") -> folium.Map:
                 avg_lat = sum(p[0] for p in bnd) / len(bnd)
                 avg_lng = sum(p[1] for p in bnd) / len(bnd)
 
+                # Estimate polygon span to scale font size
+                bnd_lats = [p[0] for p in bnd]
+                bnd_lngs = [p[1] for p in bnd]
+                span = max(max(bnd_lats) - min(bnd_lats),
+                           max(bnd_lngs) - min(bnd_lngs))
+                # Larger territories get bigger text
+                if span > 0.02:
+                    name_size, info_size = 15, 12
+                elif span > 0.01:
+                    name_size, info_size = 13, 10
+                else:
+                    name_size, info_size = 11, 9
+
                 label_html = (
-                    f'<div style="pointer-events:none;text-align:center;">'
-                    f'<div style="display:inline-block;'
-                    f'background:rgba(255,255,255,0.92);'
-                    f'border:2px solid {colors["border"]};'
-                    f'border-radius:6px;padding:4px 10px;'
-                    f'box-shadow:0 2px 6px rgba(0,0,0,0.3);">'
                     f'<div style="font-family:Segoe UI,Arial,sans-serif;'
-                    f'font-size:14px;font-weight:800;color:{colors["border"]};'
-                    f'letter-spacing:0.5px;line-height:1.3;">{esc_zone}</div>'
-                    f'<div style="font-family:Segoe UI,Arial,sans-serif;'
-                    f'font-size:11px;font-weight:600;color:#444;'
-                    f'line-height:1.3;">'
-                    f'{total_members} members &middot; {total_groups} groups</div>'
-                    f'</div></div>'
+                    f'text-align:center;pointer-events:none;">'
+                    f'<div style="font-size:{name_size}px;font-weight:800;'
+                    f'color:{colors["border"]};'
+                    f'text-shadow:0 0 3px rgba(255,255,255,0.9),'
+                    f'0 0 3px rgba(255,255,255,0.9);'
+                    f'line-height:1.2;">{esc_zone}</div>'
+                    f'<div style="font-size:{info_size}px;font-weight:700;'
+                    f'color:#222;'
+                    f'text-shadow:0 0 2px rgba(255,255,255,0.9),'
+                    f'0 0 2px rgba(255,255,255,0.9);'
+                    f'line-height:1.2;">'
+                    f'{total_members} | {total_groups} grps</div>'
+                    f'</div>'
                 )
                 folium.Marker(
                     location=[avg_lat, avg_lng],
                     icon=folium.DivIcon(
                         html=label_html,
-                        icon_size=(240, 50),
-                        icon_anchor=(120, 25),
+                        icon_size=(160, 36),
+                        icon_anchor=(80, 18),
                     ),
                 ).add_to(m)
     elapsed = time.perf_counter() - t0
