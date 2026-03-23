@@ -694,7 +694,7 @@ with map_tab4:
 
     try:
         coverage_map = build_coverage_overview_map(zone_summary)
-        st_folium(coverage_map, use_container_width=True, height=700,
+        st_folium(coverage_map, use_container_width=True, height=850,
                   key="coverage_overview_map")
     except Exception as e:
         st.error(f"Could not render coverage overview: {e}")

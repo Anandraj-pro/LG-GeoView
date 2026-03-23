@@ -1472,7 +1472,7 @@ def build_coverage_overview_map(zone_summary: "pd.DataFrame") -> folium.Map:
 
     # Fit map to covered areas only
     if all_bnd_lats:
-        pad = 0.005
+        pad = 0.002
         coverage_bounds = [
             [min(all_bnd_lats) - pad, min(all_bnd_lngs) - pad],
             [max(all_bnd_lats) + pad, max(all_bnd_lngs) + pad],
@@ -1489,7 +1489,7 @@ def build_coverage_overview_map(zone_summary: "pd.DataFrame") -> folium.Map:
         tiles="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
         attr="CartoDB Positron",
     )
-    m.fit_bounds(coverage_bounds, padding=(10, 10))
+    m.fit_bounds(coverage_bounds, padding=(5, 5))
 
     # Track which zones have been labeled (avoid duplicate labels for multi-ward zones)
     labeled_zones: set[str] = set()
