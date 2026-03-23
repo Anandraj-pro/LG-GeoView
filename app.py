@@ -11,11 +11,11 @@ from streamlit_folium import st_folium
 from src.data_loader import (
     load_from_excel, load_from_csv, load_from_upload,
     load_from_google_sheets, assign_strength, get_area_summary,
-    validate_data_quality, AREA_COORDINATES,
+    get_zone_summary, validate_data_quality, AREA_COORDINATES,
 )
 from src.map_builder import (
     build_kingdom_map, build_advanced_territory_map,
-    build_heatmap_map,
+    build_heatmap_map, build_coverage_overview_map,
     generate_territory_kml, MAP_STYLES,
 )
 from src.charts import (  # noqa: F401
@@ -458,8 +458,8 @@ st.markdown(hero_banner_html(kpi), unsafe_allow_html=True)
 chart_dark = not light_mode
 
 # --- Map ---
-map_tab1, map_tab2, map_tab3 = st.tabs(
-    ["Territory Analysis", "TKT Kingdom", "Density Heatmap"]
+map_tab1, map_tab2, map_tab3, map_tab4 = st.tabs(
+    ["Territory Analysis", "TKT Kingdom", "Density Heatmap", "Coverage Overview"]
 )
 
 with map_tab1:
@@ -686,6 +686,18 @@ with map_tab3:
         st_folium(heatmap, use_container_width=True, height=550, key="heatmap")
     except Exception as e:
         st.error(f"Could not render heatmap: {e}")
+
+with map_tab4:
+    # --- Coverage Overview (Pastor's View) ---
+    st.caption("Coverage overview by zone \u2014 click a marker for details")
+    zone_summary = get_zone_summary(df_filtered)
+
+    try:
+        coverage_map = build_coverage_overview_map(zone_summary)
+        st_folium(coverage_map, use_container_width=True, height=700,
+                  key="coverage_overview_map")
+    except Exception as e:
+        st.error(f"Could not render coverage overview: {e}")
 
 # --- Area Comparison (Task 4) ---
 st.markdown("---")

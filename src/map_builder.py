@@ -1402,3 +1402,164 @@ def generate_territory_kml(df: pd.DataFrame, summary_df: pd.DataFrame) -> str:
     lines.append('</Document>')
     lines.append('</kml>')
     return '\n'.join(lines)
+
+
+# --- Coverage Overview Map (Pastor's View) ---
+
+ZONE_STRENGTH_COLORS: dict[str, dict[str, str]] = {
+    "Strong": {"fill": "#2E7D32", "border": "#4CAF50"},
+    "Medium": {"fill": "#F57F17", "border": "#FFC107"},
+    "Weak":   {"fill": "#C62828", "border": "#F44336"},
+}
+
+
+def build_coverage_overview_map(zone_summary: "pd.DataFrame") -> folium.Map:
+    """Build a clean, full-screen coverage map with one marker per zone.
+
+    Uses CartoDB Positron tiles for a schematic look.
+    Each zone gets a circle marker with a popup showing area details.
+    """
+    t0 = time.perf_counter()
+    logger.info("Building coverage overview map with %d zones", len(zone_summary))
+
+    center, bounds = _compute_map_bounds()
+
+    m = folium.Map(
+        location=center,
+        zoom_start=DEFAULT_ZOOM,
+        tiles="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        attr="CartoDB Positron",
+    )
+    _apply_fixed_bounds(m, bounds)
+
+    if zone_summary.empty:
+        return m
+
+    for _, row in zone_summary.iterrows():
+        zone_name = str(row["zone"])
+        total_members = int(row["total_members"])
+        total_groups = int(row["total_groups"])
+        strength = row.get("strength", "Weak")
+        colors = ZONE_STRENGTH_COLORS.get(strength, ZONE_STRENGTH_COLORS["Weak"])
+
+        leaders = row.get("leaders", [])
+        meeting_days = row.get("meeting_days", [])
+        areas = row.get("areas", [])
+
+        esc_zone = html_escape(zone_name)
+
+        # Build leader rows for popup
+        leader_rows = ""
+        for i, leader in enumerate(leaders):
+            esc_leader = html_escape(str(leader))
+            day = meeting_days[i] if i < len(meeting_days) else ""
+            esc_day = html_escape(str(day))
+            area_name = areas[i] if i < len(areas) else ""
+            esc_area = html_escape(str(area_name))
+            leader_rows += (
+                f'<tr>'
+                f'<td style="padding:3px 8px;font-size:12px;color:#5D4E37;">{esc_leader}</td>'
+                f'<td style="padding:3px 8px;font-size:12px;color:#7A6B50;">{esc_day}</td>'
+                f'</tr>'
+            )
+
+        # Sub-areas line (only if zone has multiple areas)
+        sub_areas_html = ""
+        if len(areas) > 1:
+            esc_areas = ", ".join(html_escape(str(a)) for a in areas)
+            sub_areas_html = (
+                f'<div style="font-size:10px;color:#999;margin-top:2px;">'
+                f'{esc_areas}</div>'
+            )
+
+        popup_html = f"""
+        <div style="font-family: 'Segoe UI', Arial, sans-serif;
+             min-width: 220px; max-width: 300px;
+             background: #FFFBF0; color: #5D4E37;
+             padding: 14px 16px; border-radius: 8px;
+             border: 1px solid {colors['border']};">
+            <div style="font-size: 16px; font-weight: bold; color: {colors['fill']};
+                 letter-spacing: 1px; margin-bottom: 4px;
+                 border-bottom: 2px solid {colors['border']}; padding-bottom: 6px;">
+                {esc_zone}
+            </div>
+            {sub_areas_html}
+            <div style="display:flex; gap:16px; margin:8px 0;">
+                <div>
+                    <div style="font-size:20px;font-weight:bold;color:{colors['fill']};">{total_members}</div>
+                    <div style="font-size:10px;color:#999;">Members</div>
+                </div>
+                <div>
+                    <div style="font-size:20px;font-weight:bold;color:{colors['fill']};">{total_groups}</div>
+                    <div style="font-size:10px;color:#999;">Care Groups</div>
+                </div>
+            </div>
+            <table style="width:100%;border-collapse:collapse;margin-top:6px;">
+                <tr style="border-bottom:1px solid #eee;">
+                    <th style="text-align:left;padding:3px 8px;font-size:11px;color:#999;">Leader</th>
+                    <th style="text-align:left;padding:3px 8px;font-size:11px;color:#999;">Meeting Day</th>
+                </tr>
+                {leader_rows}
+            </table>
+        </div>
+        """
+
+        # Zone circle marker -- size based on member count
+        marker_radius = max(10, min(30, total_members * 0.4))
+        folium.CircleMarker(
+            location=[row["latitude"], row["longitude"]],
+            radius=marker_radius,
+            color=colors["border"],
+            fill=True,
+            fill_color=colors["fill"],
+            fill_opacity=0.6,
+            weight=2,
+            popup=folium.Popup(popup_html, max_width=320),
+        ).add_to(m)
+
+        # Member count inside circle
+        count_html = f"""
+        <div style="
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            text-align: center;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            pointer-events: none;
+        ">{total_members}</div>
+        """
+        folium.Marker(
+            location=[row["latitude"], row["longitude"]],
+            icon=folium.DivIcon(
+                html=count_html,
+                icon_size=(40, 16),
+                icon_anchor=(20, 8),
+            ),
+        ).add_to(m)
+
+        # Zone name label above marker
+        label_html = f"""
+        <div style="
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: #5D4E37;
+            font-size: 12px;
+            font-weight: 600;
+            text-align: center;
+            white-space: nowrap;
+            text-shadow: 1px 1px 2px white, -1px -1px 2px white;
+            pointer-events: none;
+        ">{esc_zone}</div>
+        """
+        folium.Marker(
+            location=[row["latitude"] + 0.005, row["longitude"]],
+            icon=folium.DivIcon(
+                html=label_html,
+                icon_size=(200, 18),
+                icon_anchor=(100, 9),
+            ),
+        ).add_to(m)
+
+    elapsed = time.perf_counter() - t0
+    logger.info("Coverage overview map built in %.3fs", elapsed)
+    return m

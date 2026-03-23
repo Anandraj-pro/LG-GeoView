@@ -355,6 +355,54 @@ def assign_strength(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def _load_zone_mapping() -> dict:
+    """Load zone mapping from JSON config file."""
+    config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "zone_mapping.json")
+    try:
+        with open(config_path, "r") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        logger.warning("Could not load zone_mapping.json: %s", e)
+        return {"zone_map": {}, "display_names": {}}
+
+
+ZONE_MAPPING = _load_zone_mapping()
+
+
+def get_zone_summary(df: pd.DataFrame) -> pd.DataFrame:
+    """Aggregate data by zone (grouped areas) for the coverage overview."""
+    if df.empty:
+        return pd.DataFrame()
+
+    zone_map = ZONE_MAPPING.get("zone_map", {})
+
+    # Map each area to its zone
+    df_z = df.copy()
+    df_z["zone"] = df_z["area"].str.lower().str.strip().map(zone_map).fillna(df_z["area"])
+
+    summary = df_z.groupby("zone").agg(
+        total_members=("members", "sum"),
+        total_families=("families", "sum"),
+        total_groups=("lg_group", "count"),
+        leaders=("leader_name", lambda x: list(x)),
+        meeting_days=("meeting_day", lambda x: list(x)),
+        areas=("area", lambda x: sorted(set(x))),
+        latitude=("latitude", "mean"),
+        longitude=("longitude", "mean"),
+    ).reset_index()
+
+    def _zone_strength(row):
+        avg = row["total_members"] / row["total_groups"] if row["total_groups"] > 0 else 0
+        if avg >= 30:
+            return "Strong"
+        elif avg >= 20:
+            return "Medium"
+        return "Weak"
+
+    summary["strength"] = summary.apply(_zone_strength, axis=1)
+    return summary
+
+
 def get_area_summary(df: pd.DataFrame) -> pd.DataFrame:
     """Aggregate data by area."""
     if df.empty:
