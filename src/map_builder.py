@@ -1559,11 +1559,14 @@ def build_coverage_overview_map(zone_summary: "pd.DataFrame") -> folium.Map:
                 label_html = (
                     f'<div style="font-family:Segoe UI,Arial,sans-serif;'
                     f'text-align:center;white-space:nowrap;pointer-events:none;">'
-                    f'<div style="font-size:12px;font-weight:700;color:{colors["border"]};'
-                    f'text-shadow:1px 1px 0 white,-1px -1px 0 white,'
-                    f'1px -1px 0 white,-1px 1px 0 white;">{esc_zone}</div>'
-                    f'<div style="font-size:10px;font-weight:600;color:#333;'
-                    f'text-shadow:1px 1px 0 white,-1px -1px 0 white;">'
+                    f'<div style="font-size:14px;font-weight:800;color:#fff;'
+                    f'text-shadow:0 0 4px {colors["border"]},0 0 4px {colors["border"]},'
+                    f'1px 1px 0 {colors["border"]},-1px -1px 0 {colors["border"]},'
+                    f'1px -1px 0 {colors["border"]},-1px 1px 0 {colors["border"]};'
+                    f'letter-spacing:0.5px;">{esc_zone}</div>'
+                    f'<div style="font-size:12px;font-weight:700;color:#fff;'
+                    f'text-shadow:0 0 3px rgba(0,0,0,0.8),0 0 3px rgba(0,0,0,0.8),'
+                    f'1px 1px 0 rgba(0,0,0,0.6),-1px -1px 0 rgba(0,0,0,0.6);">'
                     f'{total_members} members | {total_groups} groups</div>'
                     f'</div>'
                 )
@@ -1571,8 +1574,8 @@ def build_coverage_overview_map(zone_summary: "pd.DataFrame") -> folium.Map:
                     location=[avg_lat, avg_lng],
                     icon=folium.DivIcon(
                         html=label_html,
-                        icon_size=(200, 34),
-                        icon_anchor=(100, 17),
+                        icon_size=(220, 40),
+                        icon_anchor=(110, 20),
                     ),
                 ).add_to(m)
     elapsed = time.perf_counter() - t0
