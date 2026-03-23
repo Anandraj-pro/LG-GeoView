@@ -689,7 +689,37 @@ with map_tab3:
 
 with map_tab4:
     # --- Coverage Overview (Pastor's View) ---
-    st.caption("Coverage overview by zone \u2014 click a marker for details")
+    # Screenshot button aligned top-right
+    _cov_left, _cov_right = st.columns([8, 1])
+    with _cov_left:
+        st.caption("Coverage overview by zone \u2014 click a marker for details")
+    with _cov_right:
+        st.markdown(
+            """
+            <button onclick="
+                var mapEl = document.querySelector('[data-testid=\\'stStreamlitComponent\\']'
+                    + '[title*=\\'streamlit_folium\\']');
+                if (!mapEl) { mapEl = document.querySelectorAll('iframe')[0]; }
+                if (!mapEl) { alert('Map not found'); return; }
+                import('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js')
+                .then(() => {
+                    html2canvas(mapEl.parentElement, {useCORS:true, allowTaint:true}).then(canvas => {
+                        var link = document.createElement('a');
+                        link.download = 'coverage_overview.png';
+                        link.href = canvas.toDataURL();
+                        link.click();
+                    });
+                });
+            " style="
+                background:none; border:1px solid #D4AF37; border-radius:4px;
+                color:#D4AF37; padding:4px 10px; cursor:pointer; font-size:12px;
+                font-family:'Segoe UI',Arial,sans-serif; white-space:nowrap;
+            " title="Download map as image">
+                &#128247; Screenshot
+            </button>
+            """,
+            unsafe_allow_html=True,
+        )
     zone_summary = get_zone_summary(df_filtered)
 
     try:
