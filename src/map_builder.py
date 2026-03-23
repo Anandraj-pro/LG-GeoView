@@ -1517,32 +1517,21 @@ def build_coverage_overview_map(zone_summary: "pd.DataFrame") -> folium.Map:
             popup=folium.Popup(popup_html, max_width=320),
         ).add_to(m)
 
-        # Info card label -- zone name, members, groups visible on map
-        info_html = f"""
-        <div style="
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: rgba(255,251,240,0.92);
-            border: 1px solid {colors['border']};
-            border-left: 3px solid {colors['fill']};
-            border-radius: 4px;
-            padding: 4px 8px;
-            pointer-events: none;
-            white-space: nowrap;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.15);
-        ">
-            <div style="font-size:12px;font-weight:700;color:{colors['fill']};
-                 letter-spacing:0.5px;">{esc_zone}</div>
-            <div style="font-size:10px;color:#5D4E37;margin-top:1px;">
-                {total_members} members &middot; {total_groups} groups
-            </div>
-        </div>
-        """
+        # Plain text label on map
+        label_html = (
+            f'<div style="font-family:Segoe UI,Arial,sans-serif;'
+            f'text-align:center;white-space:nowrap;pointer-events:none;'
+            f'text-shadow:1px 1px 2px white,-1px -1px 2px white,1px -1px 2px white,-1px 1px 2px white;">'
+            f'<div style="font-size:12px;font-weight:700;color:{colors["fill"]};">{esc_zone}</div>'
+            f'<div style="font-size:10px;color:#5D4E37;">{total_members} members | {total_groups} groups</div>'
+            f'</div>'
+        )
         folium.Marker(
             location=[row["latitude"] + 0.004, row["longitude"]],
             icon=folium.DivIcon(
-                html=info_html,
-                icon_size=(180, 40),
-                icon_anchor=(90, 40),
+                html=label_html,
+                icon_size=(200, 34),
+                icon_anchor=(100, 34),
             ),
         ).add_to(m)
 
