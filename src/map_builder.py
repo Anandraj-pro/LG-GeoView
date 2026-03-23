@@ -1435,38 +1435,16 @@ def build_coverage_overview_map(zone_summary: "pd.DataFrame") -> folium.Map:
     if zone_summary.empty:
         return m
 
-    # Collect zone centers for Voronoi computation
-    zone_centers = []
-    zone_names = []
-    for _, row in zone_summary.iterrows():
-        zone_centers.append((row["latitude"], row["longitude"]))
-        zone_names.append(str(row["zone"]))
+    # Draw each zone as a colored territory circle
+    for idx, (_, row) in enumerate(zone_summary.iterrows()):
+        zone_name = str(row["zone"])
+        total_members = int(row["total_members"])
+        total_groups = int(row["total_groups"])
+        leaders = row.get("leaders", [])
+        meeting_days = row.get("meeting_days", [])
+        areas = row.get("areas", [])
 
-    # Bounding box with padding
-    lats = [c[0] for c in zone_centers]
-    lngs = [c[1] for c in zone_centers]
-    pad = 0.01
-    bbox = (min(lats) - pad, max(lats) + pad,
-            min(lngs) - pad, max(lngs) + pad)
-
-    # Compute Voronoi polygon boundaries
-    boundaries = _compute_voronoi_boundaries(zone_centers, bbox)
-
-    # Assign colors from territory palette
-    zone_color_map: dict[int, dict[str, str]] = {}
-    for idx in range(len(zone_names)):
-        zone_color_map[idx] = TERRITORY_PALETTE[idx % len(TERRITORY_PALETTE)]
-
-    # Draw each zone
-    for idx, row in enumerate(zone_summary.itertuples()):
-        zone_name = zone_names[idx]
-        total_members = int(row.total_members)
-        total_groups = int(row.total_groups)
-        leaders = row.leaders if hasattr(row, "leaders") else []
-        meeting_days = row.meeting_days if hasattr(row, "meeting_days") else []
-        areas = row.areas if hasattr(row, "areas") else []
-
-        colors = zone_color_map[idx]
+        colors = TERRITORY_PALETTE[idx % len(TERRITORY_PALETTE)]
         esc_zone = html_escape(zone_name)
 
         # Build popup with leader details (shown on click)
@@ -1496,23 +1474,22 @@ def build_coverage_overview_map(zone_summary: "pd.DataFrame") -> folium.Map:
             f'</tr>{leader_rows}</table></div>'
         )
 
-        # Draw territory polygon
-        boundary = boundaries.get(idx, [])
-        if len(boundary) >= 3:
-            folium.Polygon(
-                locations=boundary,
-                color=colors["border"],
-                fill=True,
-                fill_color=colors["fill"],
-                fill_opacity=0.35,
-                weight=3,
-                popup=folium.Popup(popup_html, max_width=300),
-                tooltip=esc_zone,
-            ).add_to(m)
+        # Territory circle -- radius scales with group count
+        territory_radius = max(500, total_groups * 300)
+        folium.Circle(
+            location=[row["latitude"], row["longitude"]],
+            radius=territory_radius,
+            color=colors["border"],
+            fill=True,
+            fill_color=colors["fill"],
+            fill_opacity=0.35,
+            weight=2,
+            popup=folium.Popup(popup_html, max_width=300),
+            tooltip=esc_zone,
+        ).add_to(m)
 
-        # Text label on the territory -- white text on colored background for readability
-        center_lat = zone_centers[idx][0]
-        center_lng = zone_centers[idx][1]
+        center_lat = row["latitude"]
+        center_lng = row["longitude"]
 
         label_html = (
             f'<div style="font-family:Segoe UI,Arial,sans-serif;'
