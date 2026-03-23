@@ -1538,13 +1538,13 @@ def build_coverage_overview_map(zone_summary: "pd.DataFrame") -> folium.Map:
                 f'</tr>{leader_rows}</table></div>'
             )
 
-            # Draw the ward polygon
+            # Draw the ward polygon -- strong fill for visible territories
             folium.Polygon(
                 locations=bnd,
                 color=colors["border"],
                 fill=True,
                 fill_color=colors["fill"],
-                fill_opacity=0.40,
+                fill_opacity=0.50,
                 weight=3,
                 popup=folium.Popup(popup_html, max_width=300),
                 tooltip=esc_zone,
@@ -1557,25 +1557,27 @@ def build_coverage_overview_map(zone_summary: "pd.DataFrame") -> folium.Map:
                 avg_lng = sum(p[1] for p in bnd) / len(bnd)
 
                 label_html = (
+                    f'<div style="pointer-events:none;text-align:center;">'
+                    f'<div style="display:inline-block;'
+                    f'background:rgba(255,255,255,0.92);'
+                    f'border:2px solid {colors["border"]};'
+                    f'border-radius:6px;padding:4px 10px;'
+                    f'box-shadow:0 2px 6px rgba(0,0,0,0.3);">'
                     f'<div style="font-family:Segoe UI,Arial,sans-serif;'
-                    f'text-align:center;white-space:nowrap;pointer-events:none;">'
-                    f'<div style="font-size:14px;font-weight:800;color:#fff;'
-                    f'text-shadow:0 0 4px {colors["border"]},0 0 4px {colors["border"]},'
-                    f'1px 1px 0 {colors["border"]},-1px -1px 0 {colors["border"]},'
-                    f'1px -1px 0 {colors["border"]},-1px 1px 0 {colors["border"]};'
-                    f'letter-spacing:0.5px;">{esc_zone}</div>'
-                    f'<div style="font-size:12px;font-weight:700;color:#fff;'
-                    f'text-shadow:0 0 3px rgba(0,0,0,0.8),0 0 3px rgba(0,0,0,0.8),'
-                    f'1px 1px 0 rgba(0,0,0,0.6),-1px -1px 0 rgba(0,0,0,0.6);">'
-                    f'{total_members} members | {total_groups} groups</div>'
-                    f'</div>'
+                    f'font-size:14px;font-weight:800;color:{colors["border"]};'
+                    f'letter-spacing:0.5px;line-height:1.3;">{esc_zone}</div>'
+                    f'<div style="font-family:Segoe UI,Arial,sans-serif;'
+                    f'font-size:11px;font-weight:600;color:#444;'
+                    f'line-height:1.3;">'
+                    f'{total_members} members &middot; {total_groups} groups</div>'
+                    f'</div></div>'
                 )
                 folium.Marker(
                     location=[avg_lat, avg_lng],
                     icon=folium.DivIcon(
                         html=label_html,
-                        icon_size=(220, 40),
-                        icon_anchor=(110, 20),
+                        icon_size=(240, 50),
+                        icon_anchor=(120, 25),
                     ),
                 ).add_to(m)
     elapsed = time.perf_counter() - t0
