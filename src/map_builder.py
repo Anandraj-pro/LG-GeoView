@@ -1414,10 +1414,10 @@ ZONE_STRENGTH_COLORS: dict[str, dict[str, str]] = {
 
 
 def build_coverage_overview_map(zone_summary: "pd.DataFrame") -> folium.Map:
-    """Build a clean, full-screen coverage map with one marker per zone.
+    """Build a clean coverage map with colored territory polygons per zone.
 
-    Uses CartoDB Positron tiles for a schematic look.
-    Each zone gets a circle marker with a popup showing area details.
+    Uses Voronoi boundaries like Territory Analysis, with zone info
+    as text labels directly on each colored territory.
     """
     t0 = time.perf_counter()
     logger.info("Building coverage overview map with %d zones", len(zone_summary))
@@ -1435,103 +1435,102 @@ def build_coverage_overview_map(zone_summary: "pd.DataFrame") -> folium.Map:
     if zone_summary.empty:
         return m
 
+    # Collect zone centers for Voronoi computation
+    zone_centers = []
+    zone_names = []
     for _, row in zone_summary.iterrows():
-        zone_name = str(row["zone"])
-        total_members = int(row["total_members"])
-        total_groups = int(row["total_groups"])
-        strength = row.get("strength", "Weak")
-        colors = ZONE_STRENGTH_COLORS.get(strength, ZONE_STRENGTH_COLORS["Weak"])
+        zone_centers.append((row["latitude"], row["longitude"]))
+        zone_names.append(str(row["zone"]))
 
-        leaders = row.get("leaders", [])
-        meeting_days = row.get("meeting_days", [])
-        areas = row.get("areas", [])
+    # Bounding box with padding
+    lats = [c[0] for c in zone_centers]
+    lngs = [c[1] for c in zone_centers]
+    pad = 0.01
+    bbox = (min(lats) - pad, max(lats) + pad,
+            min(lngs) - pad, max(lngs) + pad)
 
+    # Compute Voronoi polygon boundaries
+    boundaries = _compute_voronoi_boundaries(zone_centers, bbox)
+
+    # Assign colors from territory palette
+    zone_color_map: dict[int, dict[str, str]] = {}
+    for idx in range(len(zone_names)):
+        zone_color_map[idx] = TERRITORY_PALETTE[idx % len(TERRITORY_PALETTE)]
+
+    # Draw each zone
+    for idx, row in enumerate(zone_summary.itertuples()):
+        zone_name = zone_names[idx]
+        total_members = int(row.total_members)
+        total_groups = int(row.total_groups)
+        leaders = row.leaders if hasattr(row, "leaders") else []
+        meeting_days = row.meeting_days if hasattr(row, "meeting_days") else []
+        areas = row.areas if hasattr(row, "areas") else []
+
+        colors = zone_color_map[idx]
         esc_zone = html_escape(zone_name)
 
-        # Build leader rows for popup
+        # Build popup with leader details (shown on click)
         leader_rows = ""
         for i, leader in enumerate(leaders):
             esc_leader = html_escape(str(leader))
             day = meeting_days[i] if i < len(meeting_days) else ""
             esc_day = html_escape(str(day))
-            area_name = areas[i] if i < len(areas) else ""
-            esc_area = html_escape(str(area_name))
             leader_rows += (
                 f'<tr>'
-                f'<td style="padding:3px 8px;font-size:12px;color:#5D4E37;">{esc_leader}</td>'
-                f'<td style="padding:3px 8px;font-size:12px;color:#7A6B50;">{esc_day}</td>'
+                f'<td style="padding:3px 8px;font-size:12px;">{esc_leader}</td>'
+                f'<td style="padding:3px 8px;font-size:12px;color:#666;">{esc_day}</td>'
                 f'</tr>'
             )
 
-        # Sub-areas line (only if zone has multiple areas)
-        sub_areas_html = ""
-        if len(areas) > 1:
-            esc_areas = ", ".join(html_escape(str(a)) for a in areas)
-            sub_areas_html = (
-                f'<div style="font-size:10px;color:#999;margin-top:2px;">'
-                f'{esc_areas}</div>'
-            )
+        popup_html = (
+            f'<div style="font-family:Segoe UI,Arial,sans-serif;min-width:200px;padding:8px;">'
+            f'<b style="font-size:14px;color:{colors["border"]};">{esc_zone}</b>'
+            f'<hr style="margin:6px 0;border-color:#ddd;">'
+            f'<div style="font-size:12px;line-height:1.8;">'
+            f'Members: <b>{total_members}</b><br>'
+            f'Care Groups: <b>{total_groups}</b></div>'
+            f'<table style="width:100%;border-collapse:collapse;margin-top:6px;">'
+            f'<tr style="border-bottom:1px solid #eee;">'
+            f'<th style="text-align:left;padding:3px 8px;font-size:11px;color:#999;">Leader</th>'
+            f'<th style="text-align:left;padding:3px 8px;font-size:11px;color:#999;">Meeting Day</th>'
+            f'</tr>{leader_rows}</table></div>'
+        )
 
-        popup_html = f"""
-        <div style="font-family: 'Segoe UI', Arial, sans-serif;
-             min-width: 220px; max-width: 300px;
-             background: #FFFBF0; color: #5D4E37;
-             padding: 14px 16px; border-radius: 8px;
-             border: 1px solid {colors['border']};">
-            <div style="font-size: 16px; font-weight: bold; color: {colors['fill']};
-                 letter-spacing: 1px; margin-bottom: 4px;
-                 border-bottom: 2px solid {colors['border']}; padding-bottom: 6px;">
-                {esc_zone}
-            </div>
-            {sub_areas_html}
-            <div style="display:flex; gap:16px; margin:8px 0;">
-                <div>
-                    <div style="font-size:20px;font-weight:bold;color:{colors['fill']};">{total_members}</div>
-                    <div style="font-size:10px;color:#999;">Members</div>
-                </div>
-                <div>
-                    <div style="font-size:20px;font-weight:bold;color:{colors['fill']};">{total_groups}</div>
-                    <div style="font-size:10px;color:#999;">Care Groups</div>
-                </div>
-            </div>
-            <table style="width:100%;border-collapse:collapse;margin-top:6px;">
-                <tr style="border-bottom:1px solid #eee;">
-                    <th style="text-align:left;padding:3px 8px;font-size:11px;color:#999;">Leader</th>
-                    <th style="text-align:left;padding:3px 8px;font-size:11px;color:#999;">Meeting Day</th>
-                </tr>
-                {leader_rows}
-            </table>
-        </div>
-        """
+        # Draw territory polygon
+        boundary = boundaries.get(idx, [])
+        if len(boundary) >= 3:
+            folium.Polygon(
+                locations=boundary,
+                color=colors["border"],
+                fill=True,
+                fill_color=colors["fill"],
+                fill_opacity=0.35,
+                weight=3,
+                popup=folium.Popup(popup_html, max_width=300),
+                tooltip=esc_zone,
+            ).add_to(m)
 
-        # Zone circle marker -- size based on member count
-        marker_radius = max(10, min(30, total_members * 0.4))
-        folium.CircleMarker(
-            location=[row["latitude"], row["longitude"]],
-            radius=marker_radius,
-            color=colors["border"],
-            fill=True,
-            fill_color=colors["fill"],
-            fill_opacity=0.6,
-            weight=2,
-            popup=folium.Popup(popup_html, max_width=320),
-        ).add_to(m)
+        # Text label on the territory -- white text on colored background for readability
+        center_lat = zone_centers[idx][0]
+        center_lng = zone_centers[idx][1]
 
-        # Plain text label on map
         label_html = (
             f'<div style="font-family:Segoe UI,Arial,sans-serif;'
-            f'text-align:center;white-space:nowrap;pointer-events:none;'
-            f'text-shadow:1px 1px 2px white,-1px -1px 2px white,1px -1px 2px white,-1px 1px 2px white;">'
-            f'<div style="font-size:12px;font-weight:700;color:{colors["fill"]};">{esc_zone}</div>'
-            f'<div style="font-size:10px;color:#5D4E37;">{total_members} members | {total_groups} groups</div>'
+            f'text-align:center;white-space:nowrap;pointer-events:none;">'
+            f'<div style="font-size:12px;font-weight:700;color:{colors["border"]};'
+            f'text-shadow:1px 1px 0 white,-1px -1px 0 white,1px -1px 0 white,-1px 1px 0 white;'
+            f'">{esc_zone}</div>'
+            f'<div style="font-size:10px;font-weight:600;color:#333;'
+            f'text-shadow:1px 1px 0 white,-1px -1px 0 white;'
+            f'">{total_members} members | {total_groups} groups</div>'
             f'</div>'
         )
         folium.Marker(
-            location=[row["latitude"] + 0.004, row["longitude"]],
+            location=[center_lat, center_lng],
             icon=folium.DivIcon(
                 html=label_html,
                 icon_size=(200, 34),
-                icon_anchor=(100, 34),
+                icon_anchor=(100, 17),
             ),
         ).add_to(m)
 
