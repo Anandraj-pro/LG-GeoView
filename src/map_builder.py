@@ -1406,23 +1406,21 @@ def generate_territory_kml(df: pd.DataFrame, summary_df: pd.DataFrame) -> str:
 
 # --- Coverage Overview Map (Pastor's View) ---
 
-ZONE_STRENGTH_COLORS: dict[str, dict[str, str]] = {
-    "Strong": {"fill": "#2E7D32", "border": "#4CAF50"},
-    "Medium": {"fill": "#F57F17", "border": "#FFC107"},
-    "Weak":   {"fill": "#C62828", "border": "#F44336"},
-}
-
 
 def build_coverage_overview_map(zone_summary: "pd.DataFrame") -> folium.Map:
-    """Build a clean coverage map with colored territory polygons per zone.
+    """Build coverage map using real GHMC ward boundaries (same as Territory Analysis).
 
-    Uses Voronoi boundaries like Territory Analysis, with zone info
-    as text labels directly on each colored territory.
+    Shows colored ward polygons with zone-aggregated text labels
+    (zone name, total members, total groups) directly on each territory.
+    No circle markers -- just colored areas with text.
     """
     t0 = time.perf_counter()
     logger.info("Building coverage overview map with %d zones", len(zone_summary))
 
+    from src.data_loader import AREA_COORDINATES, ZONE_MAPPING
+
     center, bounds = _compute_map_bounds()
+    zone_map = ZONE_MAPPING.get("zone_map", {})
 
     m = folium.Map(
         location=center,
@@ -1435,81 +1433,130 @@ def build_coverage_overview_map(zone_summary: "pd.DataFrame") -> folium.Map:
     if zone_summary.empty:
         return m
 
-    # Draw each zone as a colored territory circle
-    for idx, (_, row) in enumerate(zone_summary.iterrows()):
-        zone_name = str(row["zone"])
-        total_members = int(row["total_members"])
-        total_groups = int(row["total_groups"])
-        leaders = row.get("leaders", [])
-        meeting_days = row.get("meeting_days", [])
-        areas = row.get("areas", [])
+    # Build zone lookup: zone_name -> row data
+    zone_lookup: dict[str, pd.Series] = {}
+    for _, zrow in zone_summary.iterrows():
+        zone_lookup[str(zrow["zone"])] = zrow
 
-        colors = TERRITORY_PALETTE[idx % len(TERRITORY_PALETTE)]
-        esc_zone = html_escape(zone_name)
+    # Load real ward boundary data (same as Territory Analysis)
+    ward_boundaries, area_ward_map = _load_ward_data()
 
-        # Build popup with leader details (shown on click)
-        leader_rows = ""
-        for i, leader in enumerate(leaders):
-            esc_leader = html_escape(str(leader))
-            day = meeting_days[i] if i < len(meeting_days) else ""
-            esc_day = html_escape(str(day))
-            leader_rows += (
-                f'<tr>'
-                f'<td style="padding:3px 8px;font-size:12px;">{esc_leader}</td>'
-                f'<td style="padding:3px 8px;font-size:12px;color:#666;">{esc_day}</td>'
-                f'</tr>'
+    # All known areas
+    area_names = list(AREA_COORDINATES.keys())
+
+    # Map each ward to its zone
+    ward_to_zone: dict[str, str] = {}
+    for area_name in area_names:
+        ward = area_ward_map.get(area_name)
+        zone = zone_map.get(area_name, area_name.title())
+        if ward:
+            # If multiple areas in same ward map to different zones,
+            # use the first one found
+            if ward not in ward_to_zone:
+                ward_to_zone[ward] = zone
+
+    # Assign colors per zone
+    zone_color_idx: dict[str, dict[str, str]] = {}
+    cidx = 0
+    for zone_name in sorted(zone_lookup.keys()):
+        zone_color_idx[zone_name] = TERRITORY_PALETTE[cidx % len(TERRITORY_PALETTE)]
+        cidx += 1
+
+    # Track which zones have been labeled (avoid duplicate labels for multi-ward zones)
+    labeled_zones: set[str] = set()
+
+    # Draw ward polygons colored by zone
+    for ward_name, zone_name in ward_to_zone.items():
+        bnd = ward_boundaries.get(ward_name)
+        if not bnd or len(bnd) < 3:
+            continue
+
+        zrow = zone_lookup.get(zone_name)
+        colors = zone_color_idx.get(zone_name, UNOCCUPIED_COLOR)
+
+        if zrow is not None:
+            total_members = int(zrow["total_members"])
+            total_groups = int(zrow["total_groups"])
+            leaders = zrow.get("leaders", [])
+            meeting_days = zrow.get("meeting_days", [])
+            esc_zone = html_escape(zone_name)
+
+            # Build popup with leader details
+            leader_rows = ""
+            for i, leader in enumerate(leaders):
+                esc_leader = html_escape(str(leader))
+                day = meeting_days[i] if i < len(meeting_days) else ""
+                esc_day = html_escape(str(day))
+                leader_rows += (
+                    f'<tr>'
+                    f'<td style="padding:3px 8px;font-size:12px;">{esc_leader}</td>'
+                    f'<td style="padding:3px 8px;font-size:12px;color:#666;">{esc_day}</td>'
+                    f'</tr>'
+                )
+
+            popup_html = (
+                f'<div style="font-family:Segoe UI,Arial,sans-serif;'
+                f'min-width:200px;padding:8px;">'
+                f'<b style="font-size:14px;color:{colors["border"]};">{esc_zone}</b>'
+                f'<hr style="margin:6px 0;border-color:#ddd;">'
+                f'<div style="font-size:12px;line-height:1.8;">'
+                f'Members: <b>{total_members}</b><br>'
+                f'Care Groups: <b>{total_groups}</b></div>'
+                f'<table style="width:100%;border-collapse:collapse;margin-top:6px;">'
+                f'<tr style="border-bottom:1px solid #eee;">'
+                f'<th style="text-align:left;padding:3px 8px;font-size:11px;color:#999;">Leader</th>'
+                f'<th style="text-align:left;padding:3px 8px;font-size:11px;color:#999;">Meeting Day</th>'
+                f'</tr>{leader_rows}</table></div>'
             )
 
-        popup_html = (
-            f'<div style="font-family:Segoe UI,Arial,sans-serif;min-width:200px;padding:8px;">'
-            f'<b style="font-size:14px;color:{colors["border"]};">{esc_zone}</b>'
-            f'<hr style="margin:6px 0;border-color:#ddd;">'
-            f'<div style="font-size:12px;line-height:1.8;">'
-            f'Members: <b>{total_members}</b><br>'
-            f'Care Groups: <b>{total_groups}</b></div>'
-            f'<table style="width:100%;border-collapse:collapse;margin-top:6px;">'
-            f'<tr style="border-bottom:1px solid #eee;">'
-            f'<th style="text-align:left;padding:3px 8px;font-size:11px;color:#999;">Leader</th>'
-            f'<th style="text-align:left;padding:3px 8px;font-size:11px;color:#999;">Meeting Day</th>'
-            f'</tr>{leader_rows}</table></div>'
-        )
+            # Draw the ward polygon
+            folium.Polygon(
+                locations=bnd,
+                color=colors["border"],
+                fill=True,
+                fill_color=colors["fill"],
+                fill_opacity=0.40,
+                weight=3,
+                popup=folium.Popup(popup_html, max_width=300),
+                tooltip=esc_zone,
+            ).add_to(m)
 
-        # Territory circle -- radius scales with group count
-        territory_radius = max(500, total_groups * 300)
-        folium.Circle(
-            location=[row["latitude"], row["longitude"]],
-            radius=territory_radius,
-            color=colors["border"],
-            fill=True,
-            fill_color=colors["fill"],
-            fill_opacity=0.35,
-            weight=2,
-            popup=folium.Popup(popup_html, max_width=300),
-            tooltip=esc_zone,
-        ).add_to(m)
+            # Text label at polygon centroid (only once per zone)
+            if zone_name not in labeled_zones:
+                labeled_zones.add(zone_name)
+                avg_lat = sum(p[0] for p in bnd) / len(bnd)
+                avg_lng = sum(p[1] for p in bnd) / len(bnd)
 
-        center_lat = row["latitude"]
-        center_lng = row["longitude"]
-
-        label_html = (
-            f'<div style="font-family:Segoe UI,Arial,sans-serif;'
-            f'text-align:center;white-space:nowrap;pointer-events:none;">'
-            f'<div style="font-size:12px;font-weight:700;color:{colors["border"]};'
-            f'text-shadow:1px 1px 0 white,-1px -1px 0 white,1px -1px 0 white,-1px 1px 0 white;'
-            f'">{esc_zone}</div>'
-            f'<div style="font-size:10px;font-weight:600;color:#333;'
-            f'text-shadow:1px 1px 0 white,-1px -1px 0 white;'
-            f'">{total_members} members | {total_groups} groups</div>'
-            f'</div>'
-        )
-        folium.Marker(
-            location=[center_lat, center_lng],
-            icon=folium.DivIcon(
-                html=label_html,
-                icon_size=(200, 34),
-                icon_anchor=(100, 17),
-            ),
-        ).add_to(m)
+                label_html = (
+                    f'<div style="font-family:Segoe UI,Arial,sans-serif;'
+                    f'text-align:center;white-space:nowrap;pointer-events:none;">'
+                    f'<div style="font-size:12px;font-weight:700;color:{colors["border"]};'
+                    f'text-shadow:1px 1px 0 white,-1px -1px 0 white,'
+                    f'1px -1px 0 white,-1px 1px 0 white;">{esc_zone}</div>'
+                    f'<div style="font-size:10px;font-weight:600;color:#333;'
+                    f'text-shadow:1px 1px 0 white,-1px -1px 0 white;">'
+                    f'{total_members} members | {total_groups} groups</div>'
+                    f'</div>'
+                )
+                folium.Marker(
+                    location=[avg_lat, avg_lng],
+                    icon=folium.DivIcon(
+                        html=label_html,
+                        icon_size=(200, 34),
+                        icon_anchor=(100, 17),
+                    ),
+                ).add_to(m)
+        else:
+            # Ward with no zone data -- draw as unoccupied
+            folium.Polygon(
+                locations=bnd,
+                color=UNOCCUPIED_COLOR["border"],
+                fill=True,
+                fill_color=UNOCCUPIED_COLOR["fill"],
+                fill_opacity=0.10,
+                weight=1,
+                tooltip=html_escape(ward_name),
+            ).add_to(m)
 
     elapsed = time.perf_counter() - t0
     logger.info("Coverage overview map built in %.3fs", elapsed)
