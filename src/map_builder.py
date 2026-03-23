@@ -1419,18 +1419,15 @@ def build_coverage_overview_map(zone_summary: "pd.DataFrame") -> folium.Map:
 
     from src.data_loader import AREA_COORDINATES, ZONE_MAPPING
 
-    center, bounds = _compute_map_bounds()
     zone_map = ZONE_MAPPING.get("zone_map", {})
 
-    m = folium.Map(
-        location=center,
-        zoom_start=DEFAULT_ZOOM,
-        tiles="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-        attr="CartoDB Positron",
-    )
-    _apply_fixed_bounds(m, bounds)
-
     if zone_summary.empty:
+        center, bounds = _compute_map_bounds()
+        m = folium.Map(
+            location=center, zoom_start=DEFAULT_ZOOM,
+            tiles="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+            attr="CartoDB Positron",
+        )
         return m
 
     # Build zone lookup: zone_name -> row data
@@ -1444,14 +1441,15 @@ def build_coverage_overview_map(zone_summary: "pd.DataFrame") -> folium.Map:
     # All known areas
     area_names = list(AREA_COORDINATES.keys())
 
-    # Map each ward to its zone
+    # Map each ward to its zone (only for occupied areas)
+    occupied_areas = set(zone_map.keys())
     ward_to_zone: dict[str, str] = {}
     for area_name in area_names:
+        if area_name not in occupied_areas:
+            continue
         ward = area_ward_map.get(area_name)
         zone = zone_map.get(area_name, area_name.title())
         if ward:
-            # If multiple areas in same ward map to different zones,
-            # use the first one found
             if ward not in ward_to_zone:
                 ward_to_zone[ward] = zone
 
@@ -1462,10 +1460,41 @@ def build_coverage_overview_map(zone_summary: "pd.DataFrame") -> folium.Map:
         zone_color_idx[zone_name] = TERRITORY_PALETTE[cidx % len(TERRITORY_PALETTE)]
         cidx += 1
 
+    # Collect all boundary points to compute tight bounds for covered areas only
+    all_bnd_lats: list[float] = []
+    all_bnd_lngs: list[float] = []
+    for ward_name in ward_to_zone:
+        bnd = ward_boundaries.get(ward_name)
+        if bnd and len(bnd) >= 3:
+            for p in bnd:
+                all_bnd_lats.append(p[0])
+                all_bnd_lngs.append(p[1])
+
+    # Fit map to covered areas only
+    if all_bnd_lats:
+        pad = 0.005
+        coverage_bounds = [
+            [min(all_bnd_lats) - pad, min(all_bnd_lngs) - pad],
+            [max(all_bnd_lats) + pad, max(all_bnd_lngs) + pad],
+        ]
+        center_lat = (coverage_bounds[0][0] + coverage_bounds[1][0]) / 2
+        center_lng = (coverage_bounds[0][1] + coverage_bounds[1][1]) / 2
+    else:
+        center_lat, center_lng = HYDERABAD_CENTER
+        coverage_bounds = ORR_BOUNDS
+
+    m = folium.Map(
+        location=[center_lat, center_lng],
+        zoom_start=13,
+        tiles="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        attr="CartoDB Positron",
+    )
+    m.fit_bounds(coverage_bounds, padding=(10, 10))
+
     # Track which zones have been labeled (avoid duplicate labels for multi-ward zones)
     labeled_zones: set[str] = set()
 
-    # Draw ward polygons colored by zone
+    # Draw only covered ward polygons
     for ward_name, zone_name in ward_to_zone.items():
         bnd = ward_boundaries.get(ward_name)
         if not bnd or len(bnd) < 3:
@@ -1546,18 +1575,6 @@ def build_coverage_overview_map(zone_summary: "pd.DataFrame") -> folium.Map:
                         icon_anchor=(100, 17),
                     ),
                 ).add_to(m)
-        else:
-            # Ward with no zone data -- draw as unoccupied
-            folium.Polygon(
-                locations=bnd,
-                color=UNOCCUPIED_COLOR["border"],
-                fill=True,
-                fill_color=UNOCCUPIED_COLOR["fill"],
-                fill_opacity=0.10,
-                weight=1,
-                tooltip=html_escape(ward_name),
-            ).add_to(m)
-
     elapsed = time.perf_counter() - t0
     logger.info("Coverage overview map built in %.3fs", elapsed)
     return m
