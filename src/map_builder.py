@@ -1517,46 +1517,32 @@ def build_coverage_overview_map(zone_summary: "pd.DataFrame") -> folium.Map:
             popup=folium.Popup(popup_html, max_width=320),
         ).add_to(m)
 
-        # Member count inside circle
-        count_html = f"""
+        # Info card label -- zone name, members, groups visible on map
+        info_html = f"""
         <div style="
             font-family: 'Segoe UI', Arial, sans-serif;
-            color: white;
-            font-size: 11px;
-            font-weight: bold;
-            text-align: center;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            background: rgba(255,251,240,0.92);
+            border: 1px solid {colors['border']};
+            border-left: 3px solid {colors['fill']};
+            border-radius: 4px;
+            padding: 4px 8px;
             pointer-events: none;
-        ">{total_members}</div>
-        """
-        folium.Marker(
-            location=[row["latitude"], row["longitude"]],
-            icon=folium.DivIcon(
-                html=count_html,
-                icon_size=(40, 16),
-                icon_anchor=(20, 8),
-            ),
-        ).add_to(m)
-
-        # Zone name label above marker
-        label_html = f"""
-        <div style="
-            font-family: 'Segoe UI', Arial, sans-serif;
-            color: #5D4E37;
-            font-size: 12px;
-            font-weight: 600;
-            text-align: center;
             white-space: nowrap;
-            text-shadow: 1px 1px 2px white, -1px -1px 2px white;
-            pointer-events: none;
-        ">{esc_zone}</div>
+            box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+        ">
+            <div style="font-size:12px;font-weight:700;color:{colors['fill']};
+                 letter-spacing:0.5px;">{esc_zone}</div>
+            <div style="font-size:10px;color:#5D4E37;margin-top:1px;">
+                {total_members} members &middot; {total_groups} groups
+            </div>
+        </div>
         """
         folium.Marker(
-            location=[row["latitude"] + 0.005, row["longitude"]],
+            location=[row["latitude"] + 0.004, row["longitude"]],
             icon=folium.DivIcon(
-                html=label_html,
-                icon_size=(200, 18),
-                icon_anchor=(100, 9),
+                html=info_html,
+                icon_size=(180, 40),
+                icon_anchor=(90, 40),
             ),
         ).add_to(m)
 
